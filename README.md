@@ -23,5 +23,7 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 
  
 
+学习资料：
+http://www.critterai.org/projects/nmgen_study/
  
  

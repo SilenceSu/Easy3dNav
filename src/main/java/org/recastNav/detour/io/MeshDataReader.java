@@ -17,7 +17,6 @@ freely, subject to the following restrictions:
 */
 package org.recastNav.detour.io;
 
-import com.sh.recast.detour.*;
 import org.recastNav.detour.*;
 
 import java.io.IOException;

@@ -6,7 +6,7 @@
 
     <groupId>com.sh</groupId>
     <artifactId>RecastNav</artifactId>
-    <version>0.8</version>
+    <version>0.9</version>
 
     <!-- nexus 发布地址 -->
     <distributionManagement>

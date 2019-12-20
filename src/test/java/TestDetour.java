@@ -40,7 +40,7 @@ public class TestDetour {
     @Before
     public void init() throws IOException {
 //        nav = new RecastNav("E:\\srv_CAIBakedNavmesh.navmesh");
-        nav = new RecastNav("D:\\Nfantasy\\client\\data\\map\\srv_11_hd_pk_01.navmesh");
+//        nav = new RecastNav("D:\\Nfantasy\\client\\data\\map\\srv_11_hd_pk_01.navmesh");
 //        nav = new RecastNav("D:\\JProject\\RecastNav\\src\\main\\resources\\all_tiles_navmesh.bin");
 
     }
@@ -48,6 +48,9 @@ public class TestDetour {
 
     @Test
     public void findPath() {
+        if (nav == null) {
+            return;
+        }
 //        List<float[]> list = nav.find(new float[]{-13.22f, 18.86f, 21.06f}, new float[]{-18.48f, 18.83f, 20.29f}, new float[]{2.f, 2.f, 2.f});
 ////        List<float[]> list = nav.find(new float[]{7.3517575f, 2.6341214f, -38.87209f}, new float[]{13.129725f, 2.119f, -32.205204f});
 //        list.forEach(f -> {

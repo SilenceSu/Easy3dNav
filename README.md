@@ -1,6 +1,7 @@
 
-# recastNav
+# recastNav [![Build Status](https://travis-ci.org/SilenceSu/recastNav.svg?branch=master)](https://travis-ci.org/SilenceSu/recastNav)
 基于recast4j封装的开箱即用项目。
+
 
 
 ### 数据来源critterai 插件

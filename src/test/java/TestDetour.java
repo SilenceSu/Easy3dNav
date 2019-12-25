@@ -1,4 +1,4 @@
-import com.github.silencesu.recastNav.RecastNav;
+import com.github.silencesu.Easy3dNav.RecastNav;
 import org.junit.Before;
 import org.junit.Test;
 

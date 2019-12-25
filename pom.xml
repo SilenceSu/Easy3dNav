@@ -4,15 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <name>RecastNav</name>
+    <name>Easy3dNav</name>
 
     <groupId>com.github.silencesu</groupId>
-    <artifactId>RecastNav</artifactId>
-    <version>0.9</version>
+    <artifactId>Easy3dNav</artifactId>
+    <version>1.0.0</version>
 
 
     <description>基于recast4j封装的开箱即用项目。</description>
-     <url>https://github.com/SilenceSu/RecastNav</url>
+     <url>https://github.com/SilenceSu/Easy3dNav</url>
 
     <developers>
         <developer>

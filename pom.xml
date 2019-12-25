@@ -8,11 +8,11 @@
 
     <groupId>com.github.silencesu</groupId>
     <artifactId>Easy3dNav</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
 
     <description>基于recast4j封装的开箱即用项目。</description>
-     <url>https://github.com/SilenceSu/Easy3dNav</url>
+    <url>https://github.com/SilenceSu/Easy3dNav</url>
 
     <developers>
         <developer>
@@ -27,6 +27,13 @@
             <url>https://license.coscl.org.cn/MulanPSL</url>
         </license>
     </licenses>
+
+    <scm>
+        <connection>scm:git:git@github.com:SilenceSu/Easy3dNav.git</connection>
+        <developerConnection>scm:git@github.com:SilenceSu/Easy3dNav.git</developerConnection>
+        <url>https://github.com/SilenceSu/Easy3dNav</url>
+    </scm>
+
 
 
     <dependencies>
@@ -45,8 +52,9 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
-         </dependency>
+        </dependency>
     </dependencies>
+
 
     <build>
         <plugins>
@@ -100,18 +108,6 @@
 
             </plugin>
 
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.7</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <serverId>nexus-release</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                </configuration>
-            </plugin>
-
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -119,24 +115,6 @@
                 <version>2.4</version>
             </plugin>
 
-            <!--staging puglin,用于自动执行发布阶段(免手动)-->
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.7</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <serverId>oss</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                </configuration>
-            </plugin>
-            <!-- release plugin,用于发布到release仓库部署插件 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>2.4.2</version>
-            </plugin>
 
         </plugins>
     </build>
@@ -162,6 +140,25 @@
                         </executions>
                     </plugin>
 
+                    <!--staging puglin,用于自动执行发布阶段(免手动)-->
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.7</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>oss</serverId>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+                    <!-- release plugin,用于发布到release仓库部署插件 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-release-plugin</artifactId>
+                        <version>2.4.2</version>
+                    </plugin>
+
                 </plugins>
             </build>
             <distributionManagement>
@@ -175,6 +172,7 @@
                     <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
                 </repository>
             </distributionManagement>
+
 
         </profile>
 

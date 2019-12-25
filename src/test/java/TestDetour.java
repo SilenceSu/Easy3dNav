@@ -1,4 +1,4 @@
-import com.github.silencesu.Easy3dNav.RecastNav;
+import com.github.silencesu.Easy3dNav.Easy3dNav;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class TestDetour {
 
-    private RecastNav nav;
+    private Easy3dNav nav;
 
 
     private float[][] startPoints = new float[][]{
@@ -39,9 +39,9 @@ public class TestDetour {
 
     @Before
     public void init() throws IOException {
-//        nav = new RecastNav("E:\\srv_CAIBakedNavmesh.navmesh");
-//        nav = new RecastNav("D:\\Nfantasy\\client\\data\\map\\srv_11_hd_pk_01.navmesh");
-//        nav = new RecastNav("D:\\JProject\\RecastNav\\src\\main\\resources\\all_tiles_navmesh.bin");
+//        nav = new Easy3dNav("E:\\srv_CAIBakedNavmesh.navmesh");
+//        nav = new Easy3dNav("D:\\Nfantasy\\client\\data\\map\\srv_11_hd_pk_01.navmesh");
+//        nav = new Easy3dNav("D:\\JProject\\Easy3dNav\\src\\main\\resources\\all_tiles_navmesh.bin");
 
     }
 

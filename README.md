@@ -1,5 +1,5 @@
 
-# Easy3dNav [![Build Status](https://travis-ci.org/SilenceSu/recastNav.svg?branch=master)](https://travis-ci.org/SilenceSu/recastNav) [![maven](https://maven-badges.herokuapp.com/maven-central/com.github.silencesu/Easy3dNav/badge.svg)](https://search.maven.org/search?q=Easy3dNav)
+# Easy3dNav [![Build Status](https://travis-ci.org/SilenceSu/Easy3dNav.svg?branch=master)](https://travis-ci.org/SilenceSu/recastNav) [![maven](https://maven-badges.herokuapp.com/maven-central/com.github.silencesu/Easy3dNav/badge.svg)](https://search.maven.org/search?q=Easy3dNav)
 基于recast4j封装的Java版本3D游戏寻路组件
 
 

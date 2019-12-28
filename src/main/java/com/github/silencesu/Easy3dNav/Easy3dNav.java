@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 3d游戏服务端寻路组件
@@ -21,21 +22,39 @@ import java.util.List;
  * @Email Silence.Sx@Gmail.com
  * Created by Silence on 2018/5/3.
  */
-public class Easy3dNav {
+public class Easy3dNav implements EasyNavFunc {
 
     private static Logger LOGGER = LoggerFactory.getLogger(Easy3dNav.class);
 
 
     /**
-     * 是否使用CritterAI导出的格式
+     * 是否使用U3d插件CritterAI导出的格式
      */
-    public static final boolean critterAI = true;
+    private boolean useU3dData = true;
+    /**
+     * 是否打印地图信息
+     */
+    private boolean printMeshInfo = false;
 
     private NavMeshQuery query;
     private QueryFilter filter;
 
     private float[] extents = {2.f, 2.f, 2.f};
 
+
+    public Easy3dNav() {
+
+    }
+
+    /**
+     * 修改配置 构造
+     * @param useU3dData  是否使用critterAi数据
+     * @param printMeshInfo  是否打印地图西信息
+     */
+    public Easy3dNav(boolean useU3dData, boolean printMeshInfo) {
+        this.useU3dData = useU3dData;
+        this.printMeshInfo = printMeshInfo;
+    }
 
     //navmesh 文件路径
     public Easy3dNav(String filePath) throws IOException {
@@ -47,19 +66,27 @@ public class Easy3dNav {
      *
      * @param filePath
      */
-    private void init(String filePath) throws IOException {
-        init(filePath, true);
+    public void init(String filePath) throws IOException {
+
+        NavMesh mesh = loadNavMesh(filePath);
+
+        query = new NavMeshQuery(mesh);
+        filter = new QueryFilter();
+
+        if (printMeshInfo) {
+            printMeshInfo(mesh);
+        }
+
     }
 
-    private void init(String filePath, boolean critterAI) throws IOException {
-
+    private NavMesh loadNavMesh(String meshFile) throws IOException {
         InputStream inputStream = null;
         NavMesh mesh;
         try {
             //获取文件流
-            inputStream = new FileInputStream(new File(filePath));
+            inputStream = new FileInputStream(new File(meshFile));
 
-            if (critterAI) {
+            if (useU3dData) {
                 MeshSetReaderU3d reader = new MeshSetReaderU3d();
                 mesh = reader.read32Bit(inputStream, 6);
             } else {
@@ -81,7 +108,15 @@ public class Easy3dNav {
             }
 
         }
+        return mesh;
+    }
 
+    /**
+     * 输出mesh信息
+     *
+     * @param mesh meshd对象
+     */
+    private void printMeshInfo(NavMesh mesh) {
         //输出地图基本信息
         int tileCount = 0;
         int nodeCount = 0;
@@ -108,7 +143,6 @@ public class Easy3dNav {
             for (int m = 0; m < tile.data.header.detailVertCount; m++) {
                 System.out.printf("%f %f %f\n", tile.data.detailVerts[m * 3], tile.data.detailVerts[m * 3 + 1], tile.data.detailVerts[m * 3 + 2]);
             }
-
         }
 
         System.out.printf("\t==> tiles loaded: %d\n", tileCount);
@@ -116,17 +150,31 @@ public class Easy3dNav {
         System.out.printf("\t==> %d polygons (%d vertices)\n", polyCount, vertCount);
 
         System.out.printf("\t==> %d triangles (%d vertices)\n", triCount, triVertCount);
-
     }
 
+    /**
+     * 设置默认搜索范围
+     *
+     * @param extents 搜索范围
+     */
+    public void setExtents(float[] extents) {
+        this.extents = extents;
+    }
 
     /**
-     * 获取文件路径
+     * 设置是否使用critterAI导出的数据
      *
-     * @param start 开始坐标点  {x,y,z}
-     * @param end   结束坐标点   {x,y,z}
-     * @return
+     * @param useU3dData
      */
+    public void setUseU3dData(boolean useU3dData) {
+        this.useU3dData = useU3dData;
+    }
+
+    public void setPrintMeshInfo(boolean printMeshInfo) {
+        this.printMeshInfo = printMeshInfo;
+    }
+
+    @Override
     public List<float[]> find(float[] start, float[] end, float[] extents) {
 
 
@@ -161,19 +209,24 @@ public class Easy3dNav {
         return pathRet;
     }
 
+    @Override
+    public List<Vector3f> find(Vector3f start, Vector3f end, Vector3f extents) {
+        List<float[]> paths = find(v3fToFArr(start), v3fToFArr(end), v3fToFArr(extents));
+        return paths.stream().map(p -> new Vector3f(p[0], p[1], p[2])).collect(Collectors.toList());
+    }
+
 
     public List<float[]> find(float[] start, float[] end) {
         return find(start, end, extents);
     }
 
+    @Override
+    public List<Vector3f> find(Vector3f start, Vector3f end) {
+        return find(start, end, FArrTov3f(extents));
+    }
 
-    /**
-     * 光线照射发，寻找可以支线通过的hit点，如果可通过则返回hit
-     *
-     * @param start
-     * @param end
-     * @return
-     */
+
+    @Override
     public float[] raycast(float[] start, float[] end, float[] extents) {
         FindNearestPolyResult startResult = query.findNearestPoly(start, extents, filter);
         if (startResult.getNearestRef() == 0) {
@@ -193,36 +246,61 @@ public class Easy3dNav {
         return hitPoint;
     }
 
+    @Override
+    public Vector3f raycast(Vector3f start, Vector3f end, Vector3f extents) {
+        float[] point = raycast(v3fToFArr(start), v3fToFArr(end), v3fToFArr(extents));
+        return FArrTov3f(point);
+    }
+
+    @Override
     public float[] raycast(float[] start, float[] end) {
         return raycast(start, end, new float[]{0.f, 2.f, 0.f});
     }
 
+    @Override
+    public Vector3f raycast(Vector3f start, Vector3f end) {
+        return raycast(start, end, FArrTov3f(extents));
+    }
 
-    /**
-     * 获取指定点附近可行走的点
-     *
-     * @param point
-     * @return
-     */
+
+    @Override
     public float[] findNearest(float[] point) {
         FindNearestPolyResult result = query.findNearestPoly(point, extents, filter);
         return result.getNearestPos();
     }
 
-    /**
-     * 获取指定点附近可行走的点
-     *
-     * @param point   查找怪物位置
-     * @param extents 扩展 {x,y,z} 可以寻找的范围
-     * @return
-     */
+    @Override
+    public Vector3f findNearest(Vector3f point) {
+        float[] p = findNearest(v3fToFArr(point));
+        return FArrTov3f(p);
+    }
+
+
+    @Override
     public float[] findNearest(float[] point, float[] extents) {
         FindNearestPolyResult result = query.findNearestPoly(point, extents, filter);
         return result.getNearestPos();
     }
 
-    public void setExtents(float[] extents) {
-        this.extents = extents;
+    @Override
+    public Vector3f findNearest(Vector3f point, Vector3f extents) {
+        float[] p = findNearest(v3fToFArr(point), v3fToFArr(extents));
+        return FArrTov3f(p);
+
+     }
+
+    private static float[] v3fToFArr(Vector3f vector3f) {
+        float[] arr = new float[3];
+        arr[0] = vector3f.getX();
+        arr[1] = vector3f.getY();
+        arr[2] = vector3f.getZ();
+        return arr;
     }
+
+    private static Vector3f FArrTov3f(float[] point) {
+        return new Vector3f(point[0], point[1], point[2]);
+    }
+
+
 }
 

@@ -8,7 +8,7 @@
 
     <groupId>com.github.silencesu</groupId>
     <artifactId>Easy3dNav</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
 
 
     <description>基于recast4j封装的开箱即用项目。</description>

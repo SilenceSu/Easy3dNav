@@ -8,6 +8,7 @@ import java.io.IOException;
  * @Email Silence.Sx@Gmail.com
  * Created by Silence on 2019/12/25.
  */
+@Deprecated
 public class RecastNav extends Easy3dNav {
     public RecastNav(String filePath) throws IOException {
         super(filePath);

@@ -8,7 +8,7 @@
 <dependency>
   <groupId>com.github.silencesu</groupId>
   <artifactId>Easy3dNav</artifactId>
-  <version>1.0.1</version>
+  <version>1.1.0</version>
 </dependency>
 ````
 
@@ -22,7 +22,11 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 ### Code Demo
 
     //初始化寻路对象
-    Easy3dNav nav = new Easy3dNav(String filePath)
+    Easy3dNav nav = new Easy3dNav();
+    nav.setUseU3dData(true);//默认为true，可以忽略
+    nav.setPrintMeshInfo(true);//默认为false，查看需要设置为true
+    nav.init(filePath);
+    
     //使用寻路接口，寻路
     List<Float> paths=nav.find(float[] start, float[] end);
  

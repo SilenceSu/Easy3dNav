@@ -58,6 +58,9 @@ https://github.com/ppiastucki/recast4j
 ### 学习资料：
 http://www.critterai.org/projects/nmgen_study/
 
+### 参考博客
+https://jiangguilong2000.blog.csdn.net/article/details/125592067
+
 
 ### TODO
 - 重构引用recast4j包

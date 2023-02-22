@@ -29,6 +29,11 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
     
     //使用寻路接口，寻路
     List<Float> paths=nav.find(float[] start, float[] end);
+    
+    /***
+    * 更多demo 请参考 src/test/java
+    */
+ 
  
 注：坐标系和unity中相同，y轴向上。一定要注意。
 

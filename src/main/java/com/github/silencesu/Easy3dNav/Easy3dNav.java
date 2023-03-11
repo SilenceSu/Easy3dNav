@@ -1,13 +1,12 @@
 package com.github.silencesu.Easy3dNav;
 
+
 import com.github.silencesu.Easy3dNav.detour.*;
 import com.github.silencesu.Easy3dNav.detour.io.MeshSetReader;
 import com.github.silencesu.Easy3dNav.detour.io.MeshSetReaderU3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -84,8 +83,7 @@ public class Easy3dNav implements EasyNavFunc {
         NavMesh mesh;
         try {
             //获取文件流
-            inputStream = new FileInputStream(new File(meshFile));
-
+            inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(meshFile);
             if (useU3dData) {
                 MeshSetReaderU3d reader = new MeshSetReaderU3d();
                 mesh = reader.read32Bit(inputStream, 6);
@@ -216,6 +214,7 @@ public class Easy3dNav implements EasyNavFunc {
     }
 
 
+    @Override
     public List<float[]> find(float[] start, float[] end) {
         return find(start, end, extents);
     }

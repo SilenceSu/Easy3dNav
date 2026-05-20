@@ -1,6 +1,6 @@
 
 # Easy3dNav [![Build Status](https://travis-ci.org/SilenceSu/Easy3dNav.svg?branch=master)](https://travis-ci.org/SilenceSu/recastNav) [![maven](https://maven-badges.herokuapp.com/maven-central/com.github.silencesu/Easy3dNav/badge.svg)](https://search.maven.org/search?q=Easy3dNav)
-基于recast4j封装的Java版本3D游戏寻路组件
+基于 recast4j 封装的 Java 版本 3D 游戏寻路组件，保留简单的 `find`、`raycast`、`findNearest` API，并通过官方 `org.recast4j:detour` 依赖提供底层 NavMesh 查询能力。
 
 
 ### 使用
@@ -59,6 +59,8 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 https://github.com/recastnavigation/recastnavigation
 
 https://github.com/ppiastucki/recast4j
+
+当前项目使用 `org.recast4j:detour:1.5.7`。该版本仍兼容 Java 8；更新到更高版本前需要确认运行时 Java 基线。
  
 
 ### 学习资料：
@@ -69,7 +71,6 @@ https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 
 ### TODO
-- 重构引用recast4j包
 - 增加新功能
 - 增加recastDemo build的文件
 - 增加demo.exe 查看工具

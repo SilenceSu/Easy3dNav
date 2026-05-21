@@ -17,7 +17,7 @@ Easy3dNav 是一个基于 Java 8 和 Maven 的 3D NavMesh 寻路库。核心 API
 
 ## 测试指南
 
-测试框架为 JUnit 4，使用 `org.junit.Test` 和 `org.junit.Before`。测试类按组件或行为命名，例如 `NavMeshQueryTest` 或 `Easy3dNavTest`。避免因缺少数据而静默返回的测试；应使用小型、确定性的夹具，或明确测试前置条件。提交前运行 `mvn test`。修改寻路、射线检测、最近可行走点或 NavMesh I/O 时，应补充回归测试。
+测试框架为 JUnit 4，使用 `org.junit.Test` 和 `org.junit.Before`。测试类按组件或行为命名，例如 `NavMeshQueryTest` 或 `Easy3dNavTest`。避免因缺少数据而静默返回的测试；应使用小型、确定性的夹具，或明确测试前置条件。提交前运行 `mvn test`。修改寻路、射线检测、最近可行走点、线程级查询上下文或 NavMesh I/O 时，应补充回归测试；并发相关修改需要覆盖多线程调用场景。
 
 ## 提交与 Pull Request 规范
 

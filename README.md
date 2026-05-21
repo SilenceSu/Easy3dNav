@@ -70,9 +70,25 @@ http://www.critterai.org/projects/nmgen_study/
 https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 
-### TODO
-- 增加新功能
-- 增加recastDemo build的文件
-- 增加demo.exe 查看工具
+### 功能规划
+
+Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest` 等基础接口。后续扩展优先围绕 Detour 查询能力补齐：
+
+- 查询能力：增加 `isWalkable`、`isReachable`、`getHeight`、`closestPointOnPoly`、`findDistanceToWall`、`getPolyWallSegments`。
+- 路径控制：增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、区域 cost、include/exclude flags、any-angle、partial path 等参数。
+- 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
+- 随机点与范围查询：增加 `findRandomPoint`、`findRandomPointAround`、`findPolysAroundCircle`、`findLocalNeighbourhood`，用于怪物巡逻、出生点、逃跑点和附近可走区域扫描。
+- 加载与管理：补充 `File`、`InputStream`、`ByteBuffer` 加载入口，后续按需要支持 tile 信息查询、tile 热更新和调试数据输出。
+- 并发约定：`Easy3dNav` 加载后的 `NavMesh` 按只读数据共享；每个线程会自动持有独立的 `NavMeshQuery`。默认 `QueryFilter` 不做 ThreadLocal 隔离，由后续过滤器封装统一规划。`init`/重载地图不应与查询并发执行；使用线程池并频繁卸载或重载地图时，可调用 `clearThreadLocalQuery()` 清理当前线程缓存。
+
+### 版本规划
+
+详细路线见 [Easy3dNav 版本计划书](VERSION_PLAN.md)，接口差距见 [recast4j Detour 接口差距分析](RECAST4J_API_GAP.md)。
+
+- `2.x`：保持 Java 8 基线，使用 `org.recast4j:detour:1.5.7`，重点补齐 Detour 查询封装、U3D 兼容测试和服务端常用 API。
+- `2.1`：优先引入 `NavOptions`、`isReachable`、`isWalkable`、`findDistanceToWall`。
+- `2.2`：补充随机点、范围查询、区域 cost 和过滤器封装。
+- `2.3`：完善加载入口、真实 U3D fixture 测试、调试信息输出。
+- `3.x`：考虑升级 Java 11/17，并跟进 recast4j `1.5.8+` 或更高版本；该路线需要单独评估兼容性。
  
  

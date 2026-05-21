@@ -45,7 +45,8 @@ public class Easy3dNav implements EasyNavFunc {
      */
     private boolean printMeshInfo = false;
 
-    private NavMeshQuery query;
+    private NavMesh navMesh;
+    private ThreadLocal<NavMeshQuery> queryLocal;
     private QueryFilter filter;
 
     private float[] extents = {2.f, 2.f, 2.f};
@@ -77,10 +78,12 @@ public class Easy3dNav implements EasyNavFunc {
      */
     public void init(String filePath) throws IOException {
 
-        NavMesh mesh = loadNavMesh(filePath);
+        clearThreadLocalQuery();
 
-        query = new NavMeshQuery(mesh);
-        filter = new DefaultQueryFilter();
+        NavMesh mesh = loadNavMesh(filePath);
+        navMesh = mesh;
+        queryLocal = ThreadLocal.withInitial(() -> new NavMeshQuery(mesh));
+        filter = createQueryFilter();
 
         if (printMeshInfo) {
             printMeshInfo(mesh);
@@ -98,6 +101,33 @@ public class Easy3dNav implements EasyNavFunc {
             MeshSetReader reader = new MeshSetReader();
             return reader.read32Bit(inputStream, 6);
         }
+    }
+
+    /**
+     * 清理当前线程缓存的查询上下文。使用线程池或重载地图时可主动调用。
+     */
+    public void clearThreadLocalQuery() {
+        if (queryLocal != null) {
+            queryLocal.remove();
+        }
+    }
+
+    private NavMeshQuery query() {
+        if (queryLocal == null) {
+            throw new IllegalStateException("Easy3dNav is not initialized");
+        }
+        return queryLocal.get();
+    }
+
+    private QueryFilter filter() {
+        if (filter == null) {
+            throw new IllegalStateException("Easy3dNav is not initialized");
+        }
+        return filter;
+    }
+
+    private QueryFilter createQueryFilter() {
+        return new DefaultQueryFilter();
     }
 
     /**
@@ -168,6 +198,8 @@ public class Easy3dNav implements EasyNavFunc {
 
 
         List<float[]> pathRet = new ArrayList<>();
+        NavMeshQuery query = query();
+        QueryFilter filter = filter();
 
         //获取开始点，附近的点
         Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
@@ -232,6 +264,8 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] raycast(float[] start, float[] end, float[] extents) {
+        NavMeshQuery query = query();
+        QueryFilter filter = filter();
         Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
         if (startQuery.failed() || startQuery.result == null) {
             throw new IllegalArgumentException("not find nearestPoly");
@@ -277,6 +311,8 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] findNearest(float[] point) {
+        NavMeshQuery query = query();
+        QueryFilter filter = filter();
         Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
         if (queryResult.failed() || queryResult.result == null) {
             return null;
@@ -294,6 +330,8 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] findNearest(float[] point, float[] extents) {
+        NavMeshQuery query = query();
+        QueryFilter filter = filter();
         Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
         if (queryResult.failed() || queryResult.result == null) {
             return null;

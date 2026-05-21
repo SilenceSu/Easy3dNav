@@ -20,6 +20,9 @@
 - 新增 `nav.random()` 分组入口，提供整图、附近和范围内随机可走点。
 - 新增 `hasWalkableAround`、`distanceToWall`、`nearestWall`，覆盖范围可走性和基础墙体查询。
 - 补充 `init(File)` 文件加载入口，保留 `init(String)` 兼容用法。
+- 新增 `NavOptions`，承载 `extents`、`maxStraightPath`、straight path options、find path options 和 raycast limit。
+- 新增 `nav.path().find(start, end, options)`，支持按单次查询参数控制路径生成。
+- 新增 `nav.path().moveAlongSurface(start, end, options)`，用于服务端局部移动校验和防穿墙。
 
 ## 3. 2.0 待实现清单
 
@@ -27,9 +30,6 @@
 
 ### 3.1 2.0 可继续处理
 
-- [ ] `NavOptions`：统一承载 `extents`、`maxStraightPath`、straight path options、find path options、raycast limit 等查询参数。
-- [ ] 路径能力：提供支持 `NavOptions` 的路径查询入口，例如 `nav.path().find(start, end, options)`。
-- [ ] 移动约束：封装 `moveAlongSurface(start, end)`，用于服务端移动校验、贴地修正和防穿墙。
 - [ ] 过滤器与区域代价：设计 `NavProfile` 或等价方案，支持 include flags、exclude flags、area cost 和自定义过滤器组合。
 - [ ] 范围查询：在已完成随机点基础上，补充候选点列表、`findLocalNeighbourhood(center, radius)` 等业务可直接消费的范围能力。
 - [ ] 加载格式：明确当前 U3D/CritterAI 与 recast4j 标准格式的配置方式，暂不扩展更多加载入口。

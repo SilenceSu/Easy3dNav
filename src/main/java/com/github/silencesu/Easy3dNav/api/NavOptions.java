@@ -14,6 +14,7 @@ import com.github.silencesu.Easy3dNav.Vector3f;
  *   <li>`nav.query().isWalkable/closestPoint/getHeight`：只使用 `extents`。</li>
  *   <li>`nav.path().find`：使用 `extents`、`maxStraightPath`、`straightPathOptions`、`findPathOptions`、`raycastLimit`。</li>
  *   <li>`nav.path().isReachable`：使用 `extents`、`findPathOptions`、`raycastLimit`。</li>
+ *   <li>`nav.path().moveAlongSurface`：只使用 `extents`。</li>
  * </ul>
  */
 public final class NavOptions {
@@ -75,7 +76,8 @@ public final class NavOptions {
      * 是否为本次查询显式设置了搜索范围。
      *
      * <p>支持 API：`nav.query().isWalkable`、`nav.query().closestPoint`、
-     * `nav.query().getHeight`、`nav.path().find`、`nav.path().isReachable`。</p>
+     * `nav.query().getHeight`、`nav.path().find`、`nav.path().isReachable`、
+     * `nav.path().moveAlongSurface`。</p>
      */
     public boolean hasExtents() {
         return extents != null;
@@ -85,7 +87,8 @@ public final class NavOptions {
      * 返回本次查询的搜索范围。未显式设置时返回 null。
      *
      * <p>支持 API：`nav.query().isWalkable`、`nav.query().closestPoint`、
-     * `nav.query().getHeight`、`nav.path().find`、`nav.path().isReachable`。</p>
+     * `nav.query().getHeight`、`nav.path().find`、`nav.path().isReachable`、
+     * `nav.path().moveAlongSurface`。</p>
      */
     public Vector3f getExtents() {
         return copy(extents);
@@ -152,7 +155,7 @@ public final class NavOptions {
         /**
          * 设置本次查询的 nearest polygon 搜索范围。
          *
-         * <p>支持 API：位置查询和路径查询。随机点、墙体查询当前仍使用 Easy3dNav 默认搜索范围。</p>
+         * <p>支持 API：位置查询、路径查询和局部移动约束。随机点、墙体查询当前仍使用 Easy3dNav 默认搜索范围。</p>
          */
         public Builder extents(Vector3f extents) {
             this.extents = copy(extents);

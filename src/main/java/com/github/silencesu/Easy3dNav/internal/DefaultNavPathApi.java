@@ -50,6 +50,14 @@ public class DefaultNavPathApi implements NavPathApi {
                 extents(safeOptions), safeOptions.getFindPathOptions(), safeOptions.getRaycastLimit());
     }
 
+    @Override
+    public Vector3f moveAlongSurface(Vector3f start, Vector3f end, NavOptions options) {
+        NavOptions safeOptions = optionsOrDefault(options);
+        float[] result = detourQueries.moveAlongSurface(context.query(), context.filter(), toFloatArray(start),
+                toFloatArray(end), extents(safeOptions));
+        return toVector3f(result);
+    }
+
     private float[] defaultExtents() {
         return defaultExtentsSupplier.get();
     }
@@ -79,6 +87,13 @@ public class DefaultNavPathApi implements NavPathApi {
             }
         }
         return vectors;
+    }
+
+    private static Vector3f toVector3f(float[] point) {
+        if (point == null || point.length < 3) {
+            return null;
+        }
+        return new Vector3f(point[0], point[1], point[2]);
     }
 
     private static float[] toFloatArray(Vector3f vector) {

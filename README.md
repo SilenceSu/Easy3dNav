@@ -52,6 +52,8 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
             .raycastLimit(-1f)
             .build();
     List<Vector3f> controlledPath = nav.path().find(start, end, options);
+    Vector3f moved = nav.path().moveAlongSurface(start, end);
+    Vector3f movedWithOptions = nav.path().moveAlongSurface(start, end, options);
 
     //随机可走点
     Vector3f patrol = nav.random().pointAround(point, 20f);
@@ -68,6 +70,8 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
  
  
 注：坐标系和unity中相同，y轴向上。一定要注意。
+
+`moveAlongSurface` 用于服务端局部移动约束，例如防止客户端一步移动穿墙；它不替代完整寻路，也不保证自动修正到 NavMesh 表面高度。需要贴地高度时，可继续使用 `nav.query().getHeight(moved)` 或 `nav.query().closestPoint(moved)`。
 
 
 ### 参数说明
@@ -107,6 +111,7 @@ Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，�
 
 - 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`distanceToWall`、`nearestWall`，后续补充 `getPolyWallSegments` 等调试能力。
 - 路径控制：已增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、straight path options、find path options 和 raycast limit。
+- 移动约束：已增加 `moveAlongSurface`，用于服务端局部移动校验和防穿墙，返回实际可移动到的位置。
 - 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
 - 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin`，后续补充候选点列表、`findLocalNeighbourhood` 等高级范围能力。
 - 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 信息查询、tile 热更新和调试数据输出后续按需要再设计。

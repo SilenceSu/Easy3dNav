@@ -222,6 +222,41 @@ public class Easy3dNavTest {
     }
 
     @Test
+    public void pathApiMovesAlongSurface() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        Vector3f moved = nav.path().moveAlongSurface(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f));
+
+        assertVectorEquals(new Vector3f(9f, 0f, 9f), moved);
+    }
+
+    @Test
+    public void pathApiMoveAlongSurfaceReturnsNullWhenStartIsInvalid() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        Vector3f moved = nav.path().moveAlongSurface(new Vector3f(100f, 0f, 100f), new Vector3f(9f, 0f, 9f));
+
+        assertNull(moved);
+    }
+
+    @Test
+    public void pathApiMoveAlongSurfaceUsesNavOptionsExtents() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.setExtents(new float[]{0.1f, 0.1f, 0.1f});
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Vector3f start = new Vector3f(-1f, 0f, 1f);
+        Vector3f end = new Vector3f(2f, 0f, 1f);
+        NavOptions options = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+
+        Vector3f moved = nav.path().moveAlongSurface(start, end, options);
+
+        assertVectorEquals(end, moved);
+        assertNull(nav.path().moveAlongSurface(start, end));
+    }
+
+    @Test
     public void navOptionsDefensivelyCopiesExtents() {
         Vector3f extents = new Vector3f(2f, 4f, 2f);
         NavOptions options = NavOptions.builder().extents(extents).build();

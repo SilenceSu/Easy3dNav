@@ -7,6 +7,7 @@ import org.recast4j.detour.FindDistanceToWallResult;
 import org.recast4j.detour.FindNearestPolyResult;
 import org.recast4j.detour.FindPolysAroundResult;
 import org.recast4j.detour.FindRandomPointResult;
+import org.recast4j.detour.MoveAlongSurfaceResult;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
 import org.recast4j.detour.RaycastHit;
@@ -231,6 +232,28 @@ public class DetourQueries {
             return false;
         }
         return pathQuery.result.get(pathQuery.result.size() - 1) == endRef;
+    }
+
+    /**
+     * 沿 NavMesh 表面做一次局部移动约束。
+     *
+     * <p>Detour 的 moveAlongSurface 需要起点 polygon ref，因此先用 extents 定位起点所在 polygon，
+     * 再把起点 ref、起点和目标点交给当前线程的 NavMeshQuery。该方法只返回实际可移动到的坐标，
+     * 不暴露 visited polygon refs，也不额外调用 getPolyHeight 修正 Y 高度。</p>
+     */
+    public float[] moveAlongSurface(NavMeshQuery query, QueryFilter filter, float[] start, float[] end,
+                                    float[] extents) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, start, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || end == null) {
+            return null;
+        }
+
+        Result<MoveAlongSurfaceResult> moveQuery = query.moveAlongSurface(nearest.getNearestRef(),
+                nearest.getNearestPos(), end, filter);
+        if (moveQuery.failed() || moveQuery.result == null || moveQuery.result.getResultPos() == null) {
+            return null;
+        }
+        return moveQuery.result.getResultPos();
     }
 
     /**

@@ -1,316 +1,103 @@
-# recast4j Detour 接口差距分析
+# recast4j Detour 接口差距对比
 
-本文档用于对照 `org.recast4j:detour:1.5.7` 与 Easy3dNav 当前封装能力，辅助后续版本规划。
+本文档只对比 `org.recast4j:detour:1.5.7` 原生能力与 Easy3dNav 当前封装能力的差别，除覆盖状态和落后点外不包含其他内容。
 
-## 1. 当前 Easy3dNav 已封装能力
+对比口径：
 
-当前公开 API 主要集中在 `EasyNavFunc`：
+- `已覆盖`：Easy3dNav 已提供业务可直接使用的公开 API。
+- `部分覆盖`：Easy3dNav 已使用底层能力，但只暴露了简化结果或固定参数。
+- `内部使用`：Easy3dNav 内部依赖该能力，但调用方无法直接使用。
+- `未覆盖`：当前没有公开 API，也没有完整封装。
 
-- `find(start, end)`：基础寻路，并返回平滑后的路径点。
-- `raycast(start, end)`：射线检测，返回可直达点或阻挡点。
-- `findNearest(point)`：查找指定点附近的可行走点。
-- `init(filePath)`：加载 NavMesh 文件，默认支持 U3D/CritterAI 导出格式。
+## 1. 总体差距
 
-这些能力覆盖了最基础的服务端寻路场景，但还没有完整封装 Detour 的查询、过滤、范围搜索、随机点、墙体检测、tile 管理等能力。
-
-## 2. 基础位置查询
-
-| recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
-| --- | --- | --- | --- |
-| `findNearestPoly` | 间接使用 | 查找点附近最近 polygon，是多数查询的前置步骤 | 保持内部使用 |
-| `closestPointOnPoly` | 未封装 | 把点投影到指定 polygon 上，可用于坐标修正 | `closestPoint(point)` |
-| `closestPointOnPolyBoundary` | 未封装 | 把点限制在 polygon 边界内 | 可选 |
-| `getPolyHeight` | 未封装 | 获取 NavMesh 表面高度 | `getHeight(point)` |
-| `isValidPolyRef` | 未封装 | 判断 polygon ref 是否仍有效 | 内部使用 |
-
-典型用途：
-
-- 服务端校正客户端坐标。
-- 判断角色、怪物、掉落物是否在可走区域。
-- 根据 NavMesh 修正 Y 轴高度。
-- 将非法点吸附回最近可行走区域。
-
-建议优先级：高，适合放入 `2.1`。
-
-## 3. 可走性与可达性
-
-Easy3dNav 当前可以通过 `findNearest` 或 `find` 间接判断，但缺少语义明确的业务接口。
-
-建议新增：
-
-- `isWalkable(point)`：判断点附近是否存在有效可行走 polygon。
-- `isReachable(start, end)`：判断两点是否可达，不返回完整路径。
-
-典型用途：
-
-- 技能落点校验。
-- 怪物出生点校验。
-- AI 目标点校验。
-- 点击移动目标校验。
-- 传送点、复活点合法性检查。
-
-建议优先级：高，适合放入 `2.1`。
-
-## 4. 路径控制能力
-
-| recast4j Detour 接口或常量 | 当前状态 | 作用 | 建议封装 |
-| --- | --- | --- | --- |
-| `findPath` | 已基础使用 | 生成 polygon path | 保持 |
-| `findStraightPath` | 已基础使用 | 将 polygon path 转为路径点 | 增强参数 |
-| `DT_STRAIGHTPATH_AREA_CROSSINGS` | 未封装 | 返回区域穿越点 | `NavOptions` |
-| `DT_STRAIGHTPATH_ALL_CROSSINGS` | 未封装 | 返回所有穿越点 | `NavOptions` |
-| `DT_FINDPATH_ANY_ANGLE` | 未封装 | 任意角路径搜索 | `NavOptions` |
-| `raycastLimit` | 未封装 | any-angle 查询时限制射线检测距离 | `NavOptions` |
-
-建议新增 `NavOptions`，统一承载：
-
-- `extents`
-- `maxStraightPath`
-- `straightPathOptions`
-- `findPathOptions`
-- `raycastLimit`
-- 失败处理策略
-
-典型用途：
-
-- 控制路径点数量。
-- 返回更详细的路径穿越点。
-- 尝试更直接的 any-angle 路径。
-- 为不同业务场景使用不同路径精度。
-
-建议优先级：高，`NavOptions` 应作为后续扩展基础。
-
-## 5. 分片寻路
-
-| recast4j Detour 接口 | 当前状态 | 作用 |
+| 能力类别 | Easy3dNav 当前覆盖 | 相对 recast4j 的主要差距 |
 | --- | --- | --- |
-| `initSlicedFindPath` | 未封装 | 初始化分片寻路 |
-| `updateSlicedFindPath` | 未封装 | 分批推进寻路计算 |
-| `finalizeSlicedFindPath` | 未封装 | 完成并返回路径 |
-| `finalizeSlicedFindPathPartial` | 未封装 | 返回部分路径 |
+| 基础寻路 | 部分覆盖 | 已封装 `findPath` + `findStraightPath`，并通过 `NavOptions` 支持常用路径参数；仍未暴露路径状态、polygon path 和自定义 heuristic。 |
+| 射线检测 | 部分覆盖 | 已封装基础 `raycast`，但未暴露 `RaycastHit` 的 path、cost、法线和 `DT_RAYCAST_USE_COSTS`。 |
+| 基础位置查询 | 大部分覆盖 | 已封装最近点、可走性、高度；未封装 `closestPointOnPolyBoundary` 和 polygon ref 有效性查询。 |
+| 随机点 | 大部分覆盖 | 已封装整图、附近、范围内随机点；未暴露自定义 `PolygonByCircleConstraint` 和随机源配置。 |
+| 范围查询 | 部分覆盖 | 仅封装 `hasWalkableAround` 布尔判断；未暴露 polygon refs、parent refs、costs、局部邻域和 AABB 查询结果。 |
+| 墙体与边界 | 部分覆盖 | 已封装最近墙体距离和命中信息；未封装 wall segment 列表。 |
+| 移动约束 | 已覆盖 | 已封装 `moveAlongSurface` 返回实际可移动位置；未暴露 visited polygon refs 或 `MoveAlongSurfaceResult`。 |
+| 分片寻路 | 未覆盖 | sliced path 全部未封装。 |
+| 过滤器与区域代价 | 部分覆盖 | 内部使用默认 `QueryFilter`，但未对外暴露 include flags、exclude flags、area cost、自定义 cost。 |
+| Tile/NavMesh 管理 | 未覆盖 | tile 增删改、tile 查询、poly flags/area、off-mesh endpoints 均未封装。 |
+| IO | 部分覆盖 | 支持 `init(String)`、`init(File)` 和 U3D/标准格式开关；未公开 InputStream、ByteBuffer、写回或导出能力。 |
 
-典型用途：
+## 2. NavMeshQuery 查询能力
 
-- 大地图长距离寻路。
-- 大量 NPC 同时寻路。
-- 将寻路计算拆分到多个 tick，避免单帧耗时过高。
-
-建议优先级：中。可以等基础查询和过滤器稳定后再封装。
-
-## 6. 移动约束
-
-| recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
+| recast4j 接口或常量 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
 | --- | --- | --- | --- |
-| `moveAlongSurface` | 未封装 | 在 NavMesh 表面从当前点向目标点移动，返回实际可移动位置 | `moveAlongSurface(start, end)` 或 `move(start, end)` |
+| `findNearestPoly` | `findNearest`、`isWalkable`、内部前置查询 | 部分覆盖 | 不暴露 polygon ref、nearest ref 状态或 Detour result。 |
+| `closestPointOnPoly` | `nav.query().closestPoint(...)` | 已覆盖 | 只能按坐标查询，不能指定 polygon ref。 |
+| `closestPointOnPolyBoundary` | 无 | 未覆盖 | 无边界内投影结果。 |
+| `getPolyHeight` | `nav.query().getHeight(...)` | 已覆盖 | 只能按坐标查询，不能指定 polygon ref。 |
+| `isValidPolyRef` | 无 | 未覆盖 | 公开 API 不暴露 polygon ref，因此也没有 ref 校验入口。 |
+| `findPath` | `find(...)`、`nav.path().find(...)`、`nav.path().isReachable(...)` | 部分覆盖 | 不返回 polygon path，不暴露 partial path 状态。 |
+| `findPath(..., options, raycastLimit)` | `NavOptions.findPathOptions`、`NavOptions.raycastLimit` | 部分覆盖 | 支持 `DT_FINDPATH_ANY_ANGLE` 和 raycast limit，不支持自定义 heuristic。 |
+| `findStraightPath` | `find(...)`、`nav.path().find(..., NavOptions)` | 部分覆盖 | 支持 `maxStraightPath` 和 crossing options，不暴露 `StraightPathItem` flags/ref。 |
+| `raycast` | `raycast(...)` | 部分覆盖 | 只返回终点或阻挡点，不暴露 `RaycastHit`、命中法线、path、cost。 |
+| `DT_RAYCAST_USE_COSTS` | 无 | 未覆盖 | 射线检测不计算或返回 cost。 |
+| `moveAlongSurface` | `nav.path().moveAlongSurface(...)` | 已覆盖 | 返回 `Vector3f`，不暴露 visited polygon refs、`MoveAlongSurfaceResult` 或自动高度修正。 |
+| `findRandomPoint` | `nav.random().point()` | 已覆盖 | 不暴露 random ref。 |
+| `findRandomPointAroundCircle` | `nav.random().pointAround(...)` | 已覆盖 | 不暴露 random ref 或随机源配置。 |
+| `findRandomPointWithinCircle` | `nav.random().pointWithin(...)` | 已覆盖 | 不暴露 random ref 或随机源配置。 |
+| `findRandomPointAroundCircle(..., PolygonByCircleConstraint)` | 无 | 未覆盖 | 不支持自定义圆形约束。 |
+| `findPolysAroundCircle` | `nav.query().hasWalkableAround(...)` | 部分覆盖 | 只返回布尔值，不返回 refs、parent refs、costs。 |
+| `findPolysAroundShape` | 无 | 未覆盖 | 无自定义形状范围查询。 |
+| `findLocalNeighbourhood` | 无 | 未覆盖 | 无局部邻域 polygon 查询。 |
+| `queryPolygons` | 无 | 未覆盖 | 无 AABB polygon 查询。 |
+| `queryTiles` | 无 | 未覆盖 | 无 AABB tile 查询。 |
+| `getPolyWallSegments` | 无 | 未覆盖 | 无墙体/边界线段列表。 |
+| `findDistanceToWall` | `distanceToWall(...)`、`nearestWall(...)` | 已覆盖 | 不暴露 Detour 原始 result。 |
+| `getPathFromDijkstraSearch` | 无 | 未覆盖 | 无 Dijkstra 搜索路径读取。 |
+| `isInClosedList` | 无 | 未覆盖 | 无 closed-list 调试状态。 |
+| `getNodePool` | 无 | 未覆盖 | 无 Detour 节点池调试入口。 |
+| `getAttachedNavMesh` | 无 | 未覆盖 | 不暴露底层 `NavMesh`。 |
 
-典型用途：
+## 3. 分片寻路能力
 
-- 服务端高频移动校验。
-- 防止角色或怪物穿墙。
-- 将客户端位置修正到 NavMesh 表面。
-- 不需要完整路径时做局部移动。
-
-建议优先级：中高，适合在 `2.1` 或 `2.2` 早期加入。
-
-## 7. 随机点与范围查询
-
-| recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
+| recast4j 接口 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
 | --- | --- | --- | --- |
-| `findRandomPoint` | 已封装 | 在整个 NavMesh 上找随机点 | `nav.random().point()` |
-| `findRandomPointAroundCircle` | 已封装 | 在某点附近找随机可走点 | `nav.random().pointAround(center, radius)` |
-| `findRandomPointWithinCircle` | 已封装 | 在指定圆范围内找随机点 | `nav.random().pointWithin(center, radius)` |
-| `findPolysAroundCircle` | 内部使用 | 找圆形范围内相关 polygon | `hasWalkableAround(center, radius)` |
-| `findPolysAroundShape` | 未封装 | 找自定义形状范围内相关 polygon | 后续可选 |
-| `findLocalNeighbourhood` | 未封装 | 查找局部邻域 polygon | `findLocalNeighbourhood(center, radius)` |
-| `queryPolygons` | 未封装 | 查询 AABB 范围内 polygon | 内部或高级 API |
-| `queryTiles` | 未封装 | 查询 AABB 范围内 tile | 内部或调试 API |
+| `initSlicedFindPath` | 无 | 未覆盖 | 无分片寻路初始化。 |
+| `updateSlicedFindPath` | 无 | 未覆盖 | 无按步推进寻路。 |
+| `finalizeSlicedFindPath` | 无 | 未覆盖 | 无分片寻路完成入口。 |
+| `finalizeSlicedFindPathPartial` | 无 | 未覆盖 | 无部分路径完成入口。 |
 
-建议面向用户的封装：
+## 4. QueryFilter 与区域代价
 
-- `nav.random().point()`：在整张 NavMesh 上随机取一个可走点，返回 `Vector3f`，失败返回 `null`。
-- `nav.random().pointAround(center, radius)`：在中心点附近随机取一个可走点，适合巡逻、出生点、逃跑点。
-- `nav.random().pointWithin(center, radius)`：严格限制在指定圆形范围内取点，适合技能落点或区域内随机刷怪。
-- `nav.query().hasWalkableAround(center, radius)`：只判断范围内是否存在可走区域，适合轻量校验。
-
-封装原则：
-
-- 普通 API 返回 `Vector3f` 或 `List<Vector3f>`，不让用户处理 polygon ref、parent ref、cost 列表。
-- `findRandomPointAroundCircle` 需要先定位中心点所在 polygon，失败时直接返回 `null` 或空集合。
-- 范围查询底层可以使用 `findPolysAroundCircle`、`findLocalNeighbourhood`，但对外优先返回业务能直接使用的坐标点或布尔结果。
-- 随机函数可以先使用默认随机源；后续如需要可通过 `NavOptions` 支持传入 seed 或随机源。
-
-示例方向：
-
-```java
-Vector3f patrol = nav.random().pointAround(monsterPos, 20f);
-Vector3f spawn = nav.random().pointWithin(areaCenter, 10f);
-boolean hasArea = nav.query().hasWalkableAround(dropPos, 3f);
-```
-
-典型用途：
-
-- 怪物巡逻点。
-- 随机出生点。
-- 逃跑目标点。
-- 附近可走区域扫描。
-- 生成 AI 行为候选点。
-
-当前已完成整图随机点、附近随机点、范围内随机点和范围可走性布尔查询。后续可继续增加候选点列表或高级范围结果对象。
-
-## 8. 墙体与边界查询
-
-| recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
+| recast4j 能力 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
 | --- | --- | --- | --- |
-| `findDistanceToWall` | 已封装 | 查询点到最近墙或边界的距离 | `distanceToWall(point, radius)` / `nearestWall(point, radius)` |
-| `getPolyWallSegments` | 未封装 | 获取 polygon 墙边界线段 | `getWallSegments(point)` |
+| `DefaultQueryFilter` | 内部默认使用 | 部分覆盖 | 调用方不能配置默认过滤器。 |
+| `includeFlags` | 无 | 未覆盖 | 不能按 polygon flags 控制可通行区域。 |
+| `excludeFlags` | 无 | 未覆盖 | 不能按 polygon flags 排除区域。 |
+| `areaCost` | 无 | 未覆盖 | 不能配置不同 area 的通行代价。 |
+| 自定义 `QueryFilter.passFilter` | 无 | 未覆盖 | 不能自定义过滤逻辑。 |
+| 自定义 `QueryFilter.getCost` | 无 | 未覆盖 | 不能自定义路径代价计算。 |
 
-建议面向用户的封装：
+## 5. NavMesh 与 Tile 管理
 
-- `nav.query().distanceToWall(point, radius)`：返回点到最近墙体或边界的距离，失败返回 `null`。
-- `nav.query().nearestWall(point, radius)`：返回最近墙体距离、墙点坐标和法线，适合脱困、贴边和出生点修正。
-- `nav.debug().wallSegments(point)`：返回附近边界线段，主要用于调试、可视化和问题排查。
-
-当前使用结果对象减少重复查询：
-
-```java
-NavWallHit hit = nav.query().nearestWall(point, radius);
-Float distance = hit.getDistance();
-Vector3f position = hit.getPosition();
-Vector3f normal = hit.getNormal();
-```
-
-封装原则：
-
-- 普通业务优先使用 `distanceToWall` 和 `nearestWall`，避免直接接触 wall segment 细节。
-- `getPolyWallSegments` 返回的信息更偏调试，不建议一开始放到核心查询 API 中。
-- `findDistanceToWall` 底层同样需要先定位点所在 polygon；点无效或范围内没有墙体时返回 `null`。
-- 墙体结果应明确坐标系仍与 Unity 一致，Y 轴向上。
-
-示例方向：
-
-```java
-Float distance = nav.query().distanceToWall(pos, 5f);
-NavWallHit hit = nav.query().nearestWall(pos, 5f);
-List<NavWallSegment> segments = nav.debug().wallSegments(pos);
-```
-
-典型用途：
-
-- 判断角色或怪物离墙距离。
-- AI 避障。
-- 防止出生点过于靠墙。
-- 调试 NavMesh 边界。
-- 做贴边或脱困逻辑。
-
-当前已完成 `distanceToWall` 和 `nearestWall`。`wallSegments` 更适合作为 debug 分组能力后续加入。
-
-## 9. Filter 与区域代价
-
-| recast4j Detour 能力 | 当前状态 | 作用 | 建议封装 |
+| recast4j 接口 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
 | --- | --- | --- | --- |
-| `DefaultQueryFilter` | 内部默认使用 | 默认 polygon 过滤和 cost 计算 | 保持默认 |
-| include flags | 未对外封装 | 指定允许通过的 polygon flags | `NavOptions` / `NavProfile` |
-| exclude flags | 未对外封装 | 指定禁止通过的 polygon flags | `NavOptions` / `NavProfile` |
-| area cost | 未对外封装 | 不同区域使用不同通行代价 | `NavOptions` / `NavProfile` |
-| 自定义 `QueryFilter` | 未对外封装 | 完全自定义过滤和 cost | 高级扩展入口 |
+| `getMaxTiles`、`getTileCount` | 无公开 API | 未覆盖 | 无 tile 数量 metadata。 |
+| `getTile`、`getTileAt`、`getTilesAt` | 无 | 未覆盖 | 无 tile 查询。 |
+| `getTileRef`、`getTileByRef`、`getTileRefAt` | 无 | 未覆盖 | 无 tile ref 查询。 |
+| `calcTileLoc` | 无 | 未覆盖 | 无世界坐标到 tile 坐标转换。 |
+| `addTile` | 无 | 未覆盖 | 无运行时添加 tile。 |
+| `removeTile` | 无 | 未覆盖 | 无运行时移除 tile。 |
+| `updateTile` | 无 | 未覆盖 | 无运行时更新 tile。 |
+| `setPolyFlags`、`getPolyFlags` | 无 | 未覆盖 | 无 polygon flags 读写。 |
+| `setPolyArea`、`getPolyArea` | 无 | 未覆盖 | 无 polygon area 读写。 |
+| `getOffMeshConnectionPolyEndPoints` | 无 | 未覆盖 | 无 off-mesh connection 端点查询。 |
+| `getParams`、bounds、poly/vert/detail 数量 | 仅 `printMeshInfo` 私有输出 | 部分覆盖 | 无结构化 metadata 返回值。 |
 
-典型用途：
+## 6. IO 能力
 
-- 不同单位类型走不同区域。
-- 水、草地、道路、危险区使用不同寻路代价。
-- 动态禁止某类区域通过。
-- 为 Boss、大型单位、特殊单位配置不同路径策略。
-
-建议优先级：高。过滤器是 Detour 很核心的扩展点，应和 `NavOptions` 一起设计。
-
-## 10. Tile 与 NavMesh 管理
-
-| recast4j Detour 接口 | 当前状态 | 作用 |
-| --- | --- | --- |
-| `addTile` | 未封装 | 添加 tile |
-| `removeTile` | 未封装 | 移除 tile |
-| `updateTile` | 未封装 | 更新 tile |
-| `getTileCount` | 未封装 | 获取 tile 数量 |
-| `getTileAt` / `getTilesAt` | 未封装 | 根据 tile 坐标查询 tile |
-| `getTileRef` / `getTileByRef` | 未封装 | tile 与 ref 互查 |
-| `setPolyFlags` / `getPolyFlags` | 未封装 | 修改或读取 polygon flags |
-| `setPolyArea` / `getPolyArea` | 未封装 | 修改或读取 polygon area |
-| `getOffMeshConnectionPolyEndPoints` | 未封装 | 查询 off-mesh connection 端点 |
-
-典型用途：
-
-- 分块大地图。
-- 地图热更新。
-- 动态开关区域。
-- 修改地形类型或区域 flags。
-- off-mesh connection 调试和业务处理。
-
-建议优先级：中低。除非项目明确要支持动态地图，否则不建议过早开放。
-
-## 11. IO 能力
-
-当前 Easy3dNav 主要通过 `init(String filePath)` 加载。
-
-建议补充：
-
-- `init(File file)`
-- `init(InputStream inputStream)`
-- `init(ByteBuffer buffer)`
-- `loadU3d(...)`
-- `loadRecast4j(...)`
-- NavMesh 写回或导出能力
-
-典型用途：
-
-- 从资源包加载。
-- 从数据库或对象存储加载。
-- 从内存缓存加载。
-- 支持服务端资源热更新。
-- 用于测试和调试导出。
-
-建议优先级：中，适合放入 `2.3`。
-
-## 12. 建议实现顺序
-
-推荐优先级如下：
-
-1. `NavOptions`
-2. `isWalkable`
-3. `isReachable`
-4. `getHeight`
-5. `distanceToWall`
-6. `moveAlongSurface`
-7. `nearestWall`
-8. `random().pointAround`
-9. 范围候选点列表
-10. `QueryFilter` / area cost 封装
-11. `InputStream` / `ByteBuffer` 加载
-12. tile 管理和动态区域
-
-原因：
-
-- `NavOptions` 是后续扩展参数的基础。
-- `isWalkable`、`isReachable`、`getHeight` 是服务端业务最常用的判断类接口。
-- `distanceToWall`、`nearestWall` 和 `moveAlongSurface` 能提升移动校验、出生点修正和 AI 稳定性。
-- 随机点和范围查询主要服务 AI 行为，适合在墙体距离之后继续推进。
-- tile 管理涉及动态地图和更多状态变更，应在核心查询能力稳定后再做。
-
-## 13. 版本映射建议
-
-| 版本 | 建议范围 |
-| --- | --- |
-| `2.1` | `NavOptions`、`isWalkable`、`isReachable`、`getHeight`、`findDistanceToWall` |
-| `2.2` | `moveAlongSurface`、随机点、范围查询、过滤器和 area cost |
-| `2.3` | 加载入口、真实 U3D fixture、调试信息、基础 tile 查询 |
-| `3.x` | Java 11/17、recast4j 新版本、可能的动态 tile 管理增强 |
-
-## 14. 不建议直接暴露的内容
-
-以下能力建议先内部使用或作为高级 API 谨慎暴露：
-
-- polygon ref 细节。
-- `NodePool`、`NodeQueue`、`QueryData`。
-- Detour 内部 tile/link 结构。
-- 过多的 recast4j result 类型。
-
-原因是这些接口容易把 Easy3dNav 变成 recast4j 的薄转发层，削弱项目“简单可靠封装”的定位。
+| recast4j / 当前相关能力 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
+| --- | --- | --- | --- |
+| `MeshSetReader.read32Bit(InputStream, ...)` | `init(String)`、`init(File)` 内部使用 | 部分覆盖 | 不公开 `InputStream` 加载。 |
+| `MeshSetReader.read32Bit(ByteBuffer, ...)` | 无 | 未覆盖 | 不公开 `ByteBuffer` 加载。 |
+| recast4j 标准格式读取 | `setUseU3dData(false)` 后加载 | 部分覆盖 | 格式选择通过布尔值表达，不是显式格式 API。 |
+| U3D/CritterAI 格式读取 | 默认加载 | 已覆盖 | 只作为当前默认格式暴露。 |
+| NavMesh 写回/导出 | 无 | 未覆盖 | 无 writer 或导出入口。 |

@@ -54,7 +54,7 @@ public class DetourQueries {
                               int maxStraightPath, int straightPathOptions, int findPathOptions,
                               float raycastLimit) {
         List<float[]> pathRet = new ArrayList<>();
-        if (maxStraightPath <= 0) {
+        if (start == null || end == null || extents == null || maxStraightPath <= 0) {
             return pathRet;
         }
 
@@ -110,6 +110,10 @@ public class DetourQueries {
      * 计算命中点。</p>
      */
     public float[] raycast(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents) {
+        if (start == null || end == null || extents == null) {
+            throw new IllegalArgumentException("invalid raycast parameters");
+        }
+
         // raycast 需要从一个有效 polygon ref 开始，因此先定位起点所在 polygon。
         Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
         if (startQuery.failed() || startQuery.result == null) {
@@ -143,6 +147,9 @@ public class DetourQueries {
      * 查找指定点附近最近的可行走点。
      */
     public float[] findNearest(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents) {
+        if (point == null || extents == null) {
+            return null;
+        }
         Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
         if (queryResult.failed() || queryResult.result == null) {
             return null;

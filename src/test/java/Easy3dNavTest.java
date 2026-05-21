@@ -202,6 +202,24 @@ public class Easy3dNavTest {
     }
 
     @Test
+    public void pathApiFindReturnsEmptyForNullEndpoints() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        assertTrue(nav.path().find(null, new Vector3f(9f, 0f, 9f)).isEmpty());
+        assertTrue(nav.path().find(new Vector3f(1f, 0f, 1f), null).isEmpty());
+    }
+
+    @Test
+    public void legacyFindReturnsEmptyForNullVectorEndpoint() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        assertTrue(nav.find(null, new Vector3f(9f, 0f, 9f)).isEmpty());
+        assertTrue(nav.find(new Vector3f(1f, 0f, 1f), null).isEmpty());
+    }
+
+    @Test
     public void pathApiUsesNavOptionsForExtentsAndPathLimits() throws Exception {
         Easy3dNav nav = new Easy3dNav();
         nav.setExtents(new float[]{0.1f, 0.1f, 0.1f});
@@ -400,6 +418,61 @@ public class Easy3dNavTest {
         assertTrue(hit.getPosition().getX() >= 0f && hit.getPosition().getX() <= 10f);
         assertTrue(hit.getPosition().getZ() >= 0f && hit.getPosition().getZ() <= 10f);
         assertNull(invalidRadius);
+    }
+
+    @Test
+    public void groupedApisUseEmptySemanticsForInvalidInputs() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Vector3f point = new Vector3f(5f, 0f, 5f);
+
+        assertFalse(nav.query().isWalkable(null));
+        assertNull(nav.query().closestPoint(null));
+        assertNull(nav.query().getHeight(null));
+        assertFalse(nav.path().isReachable(null, point));
+        assertFalse(nav.path().isReachable(point, null));
+        assertNull(nav.path().moveAlongSurface(null, point));
+        assertNull(nav.path().moveAlongSurface(point, null));
+        assertNull(nav.random().pointAround(null, 3f));
+        assertNull(nav.random().pointAround(point, 0f));
+        assertNull(nav.random().pointWithin(null, 3f));
+        assertNull(nav.random().pointWithin(point, 0f));
+        assertFalse(nav.query().hasWalkableAround(null, 3f));
+        assertFalse(nav.query().hasWalkableAround(point, 0f));
+        assertNull(nav.query().distanceToWall(null, 10f));
+        assertNull(nav.query().nearestWall(point, 0f));
+        assertTrue(nav.debug().getWallSegments(null).isEmpty());
+    }
+
+    @Test
+    public void legacyFindNearestReturnsNullWhenPointIsNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        assertNull(nav.findNearest((Vector3f) null));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void uninitializedQueryThrowsIllegalStateException() {
+        Easy3dNav nav = new Easy3dNav();
+
+        nav.query().isWalkable(new Vector3f(1f, 0f, 1f));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void legacyRaycastThrowsWhenStartIsInvalid() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        nav.raycast(new Vector3f(100f, 0f, 100f), new Vector3f(9f, 0f, 9f));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void legacyRaycastThrowsWhenPointIsNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        nav.raycast(null, new Vector3f(9f, 0f, 9f));
     }
 
     @Test

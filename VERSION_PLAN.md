@@ -26,6 +26,7 @@
 - 新增 `nav.debug()` 分组入口，承载调试、可视化和 NavMesh metadata 能力。
 - 新增 `debug().getWallSegments(point, options)`，封装 Detour `getPolyWallSegments` 并返回自有 `NavWallSegment`。
 - 新增 `debug().meshInfo()`，提供结构化地图信息；旧 `setPrintMeshInfo(true)` 保留为兼容空实现，不再触发初始化打印。
+- 统一返回语义：列表型失败返回空列表，点/数值型失败返回 `null`，布尔型失败返回 `false`，未初始化抛出 `IllegalStateException`。
 
 ## 3. 2.0 待实现清单
 
@@ -39,7 +40,7 @@
 - [x] 分组 API：补充 `nav.debug()`，承载调试、可视化和 metadata 能力，避免 `Easy3dNav` 堆积过多方法。
 - [x] 墙体与边界：将 `getWallSegments(point)` 等边界线段能力放入 `nav.debug()`，只作为调试/可视化接口。
 - [x] 调试信息：提供 NavMesh metadata，例如 tile 数量、polygon 数量、顶点数量、bounds。
-- [ ] 返回语义：统一空路径、不可达、找不到 polygon、非法参数等失败表现。
+- [x] 返回语义：统一空路径、不可达、找不到 polygon、非法参数等失败表现。
 - [ ] 测试补齐：每个新增 API 至少覆盖成功、失败和边界场景；避免依赖本机绝对路径。
 - [ ] 文档示例：README 增加分组 API、加载、线程安全和常见失败原因说明。
 

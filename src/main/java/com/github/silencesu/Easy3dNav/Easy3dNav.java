@@ -223,6 +223,9 @@ public class Easy3dNav implements EasyNavFunc {
      }
 
     private static float[] v3fToFArr(Vector3f vector3f) {
+        if (vector3f == null) {
+            return null;
+        }
         float[] arr = new float[3];
         arr[0] = vector3f.getX();
         arr[1] = vector3f.getY();
@@ -231,6 +234,9 @@ public class Easy3dNav implements EasyNavFunc {
     }
 
     private static Vector3f FArrTov3f(float[] point) {
+        if (point == null || point.length < 3) {
+            return null;
+        }
         return new Vector3f(point[0], point[1], point[2]);
     }
 

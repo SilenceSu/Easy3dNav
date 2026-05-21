@@ -78,6 +78,18 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 
 `moveAlongSurface` 用于服务端局部移动约束，例如防止客户端一步移动穿墙；它不替代完整寻路，也不保证自动修正到 NavMesh 表面高度。需要贴地高度时，可继续使用 `nav.query().getHeight(moved)` 或 `nav.query().closestPoint(moved)`。
 
+### 返回语义
+
+公开 API 按返回类型表达普通查询失败：
+
+- 列表型查询返回空列表，例如 `find`、`nav.path().find`、`nav.debug().getWallSegments`。
+- 点结果查询返回 `null`，例如 `closestPoint`、`moveAlongSurface`、`random().pointAround`。
+- 布尔查询返回 `false`，例如 `isWalkable`、`isReachable`、`hasWalkableAround`。
+- 数值查询返回 `null`，例如 `getHeight`、`distanceToWall`。
+- `nav.debug().meshInfo()` 需要已初始化 NavMesh；未初始化调用会抛出 `IllegalStateException`。
+
+普通无结果包括找不到有效 polygon、半径小于等于 0、空坐标参数或 Detour 查询失败。旧快捷入口 `raycast` 保持兼容语义：起点无效或参数为空时抛出 `IllegalArgumentException`。
+
 
 ### 参数说明
 
@@ -121,6 +133,7 @@ Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，�
 - 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin`，后续补充候选点列表、`findLocalNeighbourhood` 等高级范围能力。
 - 调试与元数据：已增加 `debug().meshInfo()`，可查询 tile、polygon、vertex、detail triangle、BVTree node 和 bounds 摘要。
 - 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 热更新和更细粒度 tile 查询后续按需要再设计。
+- 返回语义：已统一列表、点、布尔、数值和 metadata 查询在无结果、非法输入和未初始化场景下的表现。
 - 并发约定：`Easy3dNav` 加载后的 `NavMesh` 按只读数据共享；每个线程会自动持有独立的 `NavMeshQuery`。默认 `QueryFilter` 不做 ThreadLocal 隔离，由后续过滤器封装统一规划。`init`/重载地图不应与查询并发执行；使用线程池并频繁卸载或重载地图时，可调用 `clearThreadLocalQuery()` 清理当前线程缓存。
 
 ### 版本规划

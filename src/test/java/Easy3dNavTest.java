@@ -1,10 +1,13 @@
 import com.github.silencesu.Easy3dNav.Easy3dNav;
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavDebugApi;
+import com.github.silencesu.Easy3dNav.api.NavMeshInfo;
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
 import com.github.silencesu.Easy3dNav.api.NavOptions;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
 import com.github.silencesu.Easy3dNav.api.NavRandomApi;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
+import com.github.silencesu.Easy3dNav.api.NavWallSegment;
 import org.junit.Test;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
@@ -301,12 +304,19 @@ public class Easy3dNavTest {
         assertNoFloatArrayInPublicMethods(NavPathApi.class);
         assertNoFloatArrayInPublicMethods(NavRandomApi.class);
         assertNoFloatArrayInPublicMethods(NavWallHit.class);
+        assertNoFloatArrayInPublicMethods(NavDebugApi.class);
+        assertNoFloatArrayInPublicMethods(NavWallSegment.class);
+        assertNoFloatArrayInPublicMethods(NavMeshInfo.class);
         assertNoRecast4jTypesInPublicMethods(NavOptions.class);
         assertNoRecast4jTypesInPublicMethods(NavOptions.Builder.class);
         assertNoRecast4jTypesInPublicMethods(NavQueryApi.class);
         assertNoRecast4jTypesInPublicMethods(NavPathApi.class);
         assertNoRecast4jTypesInPublicMethods(NavRandomApi.class);
         assertNoRecast4jTypesInPublicMethods(NavWallHit.class);
+        assertNoRecast4jTypesInPublicMethods(NavDebugApi.class);
+        assertNoRecast4jTypesInPublicMethods(NavWallSegment.class);
+        assertNoRecast4jTypesInPublicMethods(NavMeshInfo.class);
+        assertNoPublicMethod(NavDebugApi.class, "printMeshInfo");
     }
 
     @Test
@@ -390,6 +400,60 @@ public class Easy3dNavTest {
         assertTrue(hit.getPosition().getX() >= 0f && hit.getPosition().getX() <= 10f);
         assertTrue(hit.getPosition().getZ() >= 0f && hit.getPosition().getZ() <= 10f);
         assertNull(invalidRadius);
+    }
+
+    @Test
+    public void debugApiReturnsWallSegments() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        List<NavWallSegment> segments = nav.debug().getWallSegments(new Vector3f(5f, 0f, 5f));
+
+        assertEquals(4, segments.size());
+        for (NavWallSegment segment : segments) {
+            assertSegmentInFlatMesh(segment, 10f);
+        }
+    }
+
+    @Test
+    public void debugApiReturnsEmptyWallSegmentsWhenPointIsInvalid() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        List<NavWallSegment> missing = nav.debug().getWallSegments(new Vector3f(100f, 0f, 100f));
+        List<NavWallSegment> nullPoint = nav.debug().getWallSegments(null);
+
+        assertTrue(missing.isEmpty());
+        assertTrue(nullPoint.isEmpty());
+    }
+
+    @Test
+    public void debugApiUsesNavOptionsExtentsForWallSegments() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.setExtents(new float[]{0.1f, 0.1f, 0.1f});
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Vector3f point = new Vector3f(-1f, 0f, 1f);
+        NavOptions options = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+
+        assertTrue(nav.debug().getWallSegments(point).isEmpty());
+        assertFalse(nav.debug().getWallSegments(point, options).isEmpty());
+    }
+
+    @Test
+    public void debugApiReturnsMeshInfo() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        NavMeshInfo info = nav.debug().meshInfo();
+
+        assertEquals(1, info.getLoadedTileCount());
+        assertEquals(1, info.getMaxTileCount());
+        assertEquals(1, info.getPolygonCount());
+        assertEquals(4, info.getVertexCount());
+        assertEquals(2, info.getDetailTriangleCount());
+        assertEquals(1, info.getBvTreeNodeCount());
+        assertVectorEquals(new Vector3f(0f, 0f, 0f), info.getBoundsMin());
+        assertVectorEquals(new Vector3f(10f, 1f, 10f), info.getBoundsMax());
     }
 
     @Test
@@ -549,10 +613,22 @@ public class Easy3dNavTest {
         return typePackage != null && typePackage.getName().startsWith("org.recast4j");
     }
 
+    private void assertNoPublicMethod(Class<?> apiClass, String methodName) {
+        for (Method method : apiClass.getMethods()) {
+            assertFalse(methodName + " should not be exposed", methodName.equals(method.getName()));
+        }
+    }
+
     private void assertVectorInFlatMesh(Vector3f point, float size) {
         assertNotNull(point);
         assertTrue(point.getX() >= 0f && point.getX() <= size);
         assertEquals(0f, point.getY(), 0.001f);
         assertTrue(point.getZ() >= 0f && point.getZ() <= size);
+    }
+
+    private void assertSegmentInFlatMesh(NavWallSegment segment, float size) {
+        assertNotNull(segment);
+        assertVectorInFlatMesh(segment.getStart(), size);
+        assertVectorInFlatMesh(segment.getEnd(), size);
     }
 }

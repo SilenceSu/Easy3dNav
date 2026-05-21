@@ -18,11 +18,11 @@
 | 基础位置查询 | 大部分覆盖 | 已封装最近点、可走性、高度；未封装 `closestPointOnPolyBoundary` 和 polygon ref 有效性查询。 |
 | 随机点 | 大部分覆盖 | 已封装整图、附近、范围内随机点；未暴露自定义 `PolygonByCircleConstraint` 和随机源配置。 |
 | 范围查询 | 部分覆盖 | 仅封装 `hasWalkableAround` 布尔判断；未暴露 polygon refs、parent refs、costs、局部邻域和 AABB 查询结果。 |
-| 墙体与边界 | 部分覆盖 | 已封装最近墙体距离和命中信息；未封装 wall segment 列表。 |
+| 墙体与边界 | 部分覆盖 | 已封装最近墙体距离、命中信息和 wall segment 列表；不暴露 portal refs 或 polygon refs。 |
 | 移动约束 | 已覆盖 | 已封装 `moveAlongSurface` 返回实际可移动位置；未暴露 visited polygon refs 或 `MoveAlongSurfaceResult`。 |
 | 分片寻路 | 未覆盖 | sliced path 全部未封装。 |
 | 过滤器与区域代价 | 部分覆盖 | 内部使用默认 `QueryFilter`，但未对外暴露 include flags、exclude flags、area cost、自定义 cost。 |
-| Tile/NavMesh 管理 | 未覆盖 | tile 增删改、tile 查询、poly flags/area、off-mesh endpoints 均未封装。 |
+| Tile/NavMesh 管理 | 部分覆盖 | 已提供 NavMesh metadata 摘要；tile 增删改、tile 查询、poly flags/area、off-mesh endpoints 均未封装。 |
 | IO | 部分覆盖 | 支持 `init(String)`、`init(File)` 和 U3D/标准格式开关；未公开 InputStream、ByteBuffer、写回或导出能力。 |
 
 ## 2. NavMeshQuery 查询能力
@@ -49,7 +49,7 @@
 | `findLocalNeighbourhood` | 无 | 未覆盖 | 无局部邻域 polygon 查询。 |
 | `queryPolygons` | 无 | 未覆盖 | 无 AABB polygon 查询。 |
 | `queryTiles` | 无 | 未覆盖 | 无 AABB tile 查询。 |
-| `getPolyWallSegments` | 无 | 未覆盖 | 无墙体/边界线段列表。 |
+| `getPolyWallSegments` | `nav.debug().getWallSegments(...)` | 部分覆盖 | 返回自有 `NavWallSegment`，不暴露 portal refs、polygon refs 或 Detour 原始 result。 |
 | `findDistanceToWall` | `distanceToWall(...)`、`nearestWall(...)` | 已覆盖 | 不暴露 Detour 原始 result。 |
 | `getPathFromDijkstraSearch` | 无 | 未覆盖 | 无 Dijkstra 搜索路径读取。 |
 | `isInClosedList` | 无 | 未覆盖 | 无 closed-list 调试状态。 |
@@ -80,7 +80,7 @@
 
 | recast4j 接口 | Easy3dNav 当前接口 | 覆盖状态 | 落后点 |
 | --- | --- | --- | --- |
-| `getMaxTiles`、`getTileCount` | 无公开 API | 未覆盖 | 无 tile 数量 metadata。 |
+| `getMaxTiles`、`getTileCount` | `nav.debug().meshInfo()` | 部分覆盖 | 提供 loaded/max tile 数量摘要，不返回 tile 对象或 tile ref。 |
 | `getTile`、`getTileAt`、`getTilesAt` | 无 | 未覆盖 | 无 tile 查询。 |
 | `getTileRef`、`getTileByRef`、`getTileRefAt` | 无 | 未覆盖 | 无 tile ref 查询。 |
 | `calcTileLoc` | 无 | 未覆盖 | 无世界坐标到 tile 坐标转换。 |
@@ -90,7 +90,7 @@
 | `setPolyFlags`、`getPolyFlags` | 无 | 未覆盖 | 无 polygon flags 读写。 |
 | `setPolyArea`、`getPolyArea` | 无 | 未覆盖 | 无 polygon area 读写。 |
 | `getOffMeshConnectionPolyEndPoints` | 无 | 未覆盖 | 无 off-mesh connection 端点查询。 |
-| `getParams`、bounds、poly/vert/detail 数量 | 仅 `printMeshInfo` 私有输出 | 部分覆盖 | 无结构化 metadata 返回值。 |
+| `getParams`、bounds、poly/vert/detail 数量 | `nav.debug().meshInfo()` | 部分覆盖 | 已提供结构化 metadata 摘要；不暴露完整 `NavMeshParams`、底层 tile 数据或打印 API。 |
 
 ## 6. IO 能力
 

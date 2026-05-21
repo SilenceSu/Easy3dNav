@@ -1,12 +1,14 @@
 package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavWallSegment;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
 import org.recast4j.detour.ClosestPointOnPolyResult;
 import org.recast4j.detour.FindDistanceToWallResult;
 import org.recast4j.detour.FindNearestPolyResult;
 import org.recast4j.detour.FindPolysAroundResult;
 import org.recast4j.detour.FindRandomPointResult;
+import org.recast4j.detour.GetPolyWallSegmentsResult;
 import org.recast4j.detour.MoveAlongSurfaceResult;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
@@ -359,6 +361,36 @@ public class DetourQueries {
         return new NavWallHit(result.getDistance(), toVector3f(result.getPosition()), toVector3f(result.getNormal()));
     }
 
+    /**
+     * 查询指定点所在 polygon 的墙体或边界线段。
+     *
+     * <p>getPolyWallSegments 需要 polygon ref，因此先通过 findNearestPoly 定位目标 polygon。
+     * Easy3dNav 第一版不保存 portal refs，只把 Detour 返回的 6 元素坐标数组转换成公开的
+     * NavWallSegment；点无效、定位失败或查询失败时统一返回空列表。</p>
+     */
+    public List<NavWallSegment> wallSegments(NavMeshQuery query, QueryFilter filter, float[] point,
+                                             float[] extents) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, point, extents);
+        if (nearest == null || nearest.getNearestRef() == 0) {
+            return Collections.emptyList();
+        }
+
+        Result<GetPolyWallSegmentsResult> wallQuery = query.getPolyWallSegments(nearest.getNearestRef(), false,
+                filter);
+        if (wallQuery.failed() || wallQuery.result == null || wallQuery.result.getSegmentVerts() == null) {
+            return Collections.emptyList();
+        }
+
+        List<NavWallSegment> segments = new ArrayList<>();
+        for (float[] segment : wallQuery.result.getSegmentVerts()) {
+            if (segment == null || segment.length < 6) {
+                continue;
+            }
+            segments.add(new NavWallSegment(toVector3f(segment, 0), toVector3f(segment, 3)));
+        }
+        return segments;
+    }
+
     private FindNearestPolyResult findNearestPoly(NavMeshQuery query, QueryFilter filter, float[] point,
                                                   float[] extents) {
         if (point == null || extents == null) {
@@ -388,5 +420,9 @@ public class DetourQueries {
 
     private Vector3f toVector3f(float[] point) {
         return new Vector3f(point[0], point[1], point[2]);
+    }
+
+    private Vector3f toVector3f(float[] point, int offset) {
+        return new Vector3f(point[offset], point[offset + 1], point[offset + 2]);
     }
 }

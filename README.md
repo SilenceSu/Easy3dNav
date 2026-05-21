@@ -26,7 +26,6 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
     //初始化寻路对象
     Easy3dNav nav = new Easy3dNav();
     nav.setUseU3dData(true);//默认为true，可以忽略
-    nav.setPrintMeshInfo(true);//默认为false，查看需要设置为true
     //服务端用的为 srv_*.navmesh  
     nav.init(filePath);
     
@@ -63,6 +62,12 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
     boolean hasArea = nav.query().hasWalkableAround(point, 3f);
     Float wallDistance = nav.query().distanceToWall(point, 5f);
     NavWallHit wall = nav.query().nearestWall(point, 5f);
+
+    //调试与可视化
+    List<NavWallSegment> wallSegments = nav.debug().getWallSegments(point);
+    List<NavWallSegment> wallSegmentsWithOptions = nav.debug().getWallSegments(point,
+            NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build());
+    NavMeshInfo meshInfo = nav.debug().meshInfo();
     
     /***
     * 更多demo 请参考 src/test/java
@@ -107,14 +112,15 @@ https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 ### 功能规划
 
-Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询、`nav.path()` 路径查询、`NavOptions` 和 `nav.random()` 随机点等接口。后续扩展优先围绕 Detour 查询能力补齐：
+Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询、`nav.path()` 路径查询、`NavOptions`、`nav.random()` 随机点和 `nav.debug()` 调试接口。后续扩展优先围绕 Detour 查询能力补齐：
 
-- 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`distanceToWall`、`nearestWall`，后续补充 `getPolyWallSegments` 等调试能力。
+- 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`distanceToWall`、`nearestWall` 和 `debug().getWallSegments`。
 - 路径控制：已增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、straight path options、find path options 和 raycast limit。
 - 移动约束：已增加 `moveAlongSurface`，用于服务端局部移动校验和防穿墙，返回实际可移动到的位置。
 - 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
 - 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin`，后续补充候选点列表、`findLocalNeighbourhood` 等高级范围能力。
-- 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 信息查询、tile 热更新和调试数据输出后续按需要再设计。
+- 调试与元数据：已增加 `debug().meshInfo()`，可查询 tile、polygon、vertex、detail triangle、BVTree node 和 bounds 摘要。
+- 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 热更新和更细粒度 tile 查询后续按需要再设计。
 - 并发约定：`Easy3dNav` 加载后的 `NavMesh` 按只读数据共享；每个线程会自动持有独立的 `NavMeshQuery`。默认 `QueryFilter` 不做 ThreadLocal 隔离，由后续过滤器封装统一规划。`init`/重载地图不应与查询并发执行；使用线程池并频繁卸载或重载地图时，可调用 `clearThreadLocalQuery()` 清理当前线程缓存。
 
 ### 版本规划

@@ -1,26 +1,12 @@
 package com.github.silencesu.Easy3dNav;
 
-import com.github.silencesu.Easy3dNav.io.MeshSetReaderU3d;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.recast4j.detour.DefaultQueryFilter;
-import org.recast4j.detour.FindNearestPolyResult;
+import com.github.silencesu.Easy3dNav.internal.DetourQueries;
+import com.github.silencesu.Easy3dNav.internal.NavMeshContext;
+import com.github.silencesu.Easy3dNav.io.NavMeshLoader;
 import org.recast4j.detour.MeshTile;
 import org.recast4j.detour.NavMesh;
-import org.recast4j.detour.NavMeshQuery;
-import org.recast4j.detour.QueryFilter;
-import org.recast4j.detour.RaycastHit;
-import org.recast4j.detour.Result;
-import org.recast4j.detour.Status;
-import org.recast4j.detour.StraightPathItem;
-import org.recast4j.detour.io.MeshSetReader;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,9 +19,6 @@ import java.util.stream.Collectors;
  */
 public class Easy3dNav implements EasyNavFunc {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(Easy3dNav.class);
-
-
     /**
      * 是否使用U3d插件CritterAI导出的格式
      */
@@ -45,9 +28,9 @@ public class Easy3dNav implements EasyNavFunc {
      */
     private boolean printMeshInfo = false;
 
-    private NavMesh navMesh;
-    private ThreadLocal<NavMeshQuery> queryLocal;
-    private QueryFilter filter;
+    private final NavMeshLoader navMeshLoader = new NavMeshLoader();
+    private final NavMeshContext context = new NavMeshContext();
+    private final DetourQueries detourQueries = new DetourQueries();
 
     private float[] extents = {2.f, 2.f, 2.f};
 
@@ -80,10 +63,8 @@ public class Easy3dNav implements EasyNavFunc {
 
         clearThreadLocalQuery();
 
-        NavMesh mesh = loadNavMesh(filePath);
-        navMesh = mesh;
-        queryLocal = ThreadLocal.withInitial(() -> new NavMeshQuery(mesh));
-        filter = createQueryFilter();
+        NavMesh mesh = navMeshLoader.load(filePath, useU3dData);
+        context.reset(mesh);
 
         if (printMeshInfo) {
             printMeshInfo(mesh);
@@ -91,43 +72,11 @@ public class Easy3dNav implements EasyNavFunc {
 
     }
 
-    private NavMesh loadNavMesh(String meshFile) throws IOException {
-        try (InputStream inputStream = new FileInputStream(new File(meshFile))) {
-            //获取文件流
-            if (useU3dData) {
-                MeshSetReaderU3d reader = new MeshSetReaderU3d();
-                return reader.read32Bit(inputStream, 6);
-            }
-            MeshSetReader reader = new MeshSetReader();
-            return reader.read32Bit(inputStream, 6);
-        }
-    }
-
     /**
      * 清理当前线程缓存的查询上下文。使用线程池或重载地图时可主动调用。
      */
     public void clearThreadLocalQuery() {
-        if (queryLocal != null) {
-            queryLocal.remove();
-        }
-    }
-
-    private NavMeshQuery query() {
-        if (queryLocal == null) {
-            throw new IllegalStateException("Easy3dNav is not initialized");
-        }
-        return queryLocal.get();
-    }
-
-    private QueryFilter filter() {
-        if (filter == null) {
-            throw new IllegalStateException("Easy3dNav is not initialized");
-        }
-        return filter;
-    }
-
-    private QueryFilter createQueryFilter() {
-        return new DefaultQueryFilter();
+        context.clearThreadLocalQuery();
     }
 
     /**
@@ -195,54 +144,7 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public List<float[]> find(float[] start, float[] end, float[] extents) {
-
-
-        List<float[]> pathRet = new ArrayList<>();
-        NavMeshQuery query = query();
-        QueryFilter filter = filter();
-
-        //获取开始点，附近的点
-        Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
-        if (startQuery.failed() || startQuery.result == null) {
-            LOGGER.info("start point not found poly");
-            return Collections.emptyList();
-        }
-        FindNearestPolyResult startResult = startQuery.result;
-        //获取结束点，附近的点
-        Result<FindNearestPolyResult> endQuery = query.findNearestPoly(end, extents, filter);
-        if (endQuery.failed() || endQuery.result == null) {
-            LOGGER.info("end point not found poly");
-            return Collections.emptyList();
-        }
-        FindNearestPolyResult endResult = endQuery.result;
-
-        //寻找开始点和结束点附近的多边形
-        if (startResult.getNearestRef() == 0 || endResult.getNearestRef() == 0) {
-            LOGGER.info("start or end point not found poly");
-            return Collections.emptyList();
-        }
-
-        //获取路径ids
-        Result<List<Long>> path = query.findPath(startResult.getNearestRef(), endResult.getNearestRef(), startResult.getNearestPos(), endResult.getNearestPos(), filter);
-
-        if (path.status != Status.SUCCSESS || path.result == null) {
-            LOGGER.info("nav path  status is  {}", path.status);
-            return Collections.emptyList();
-        }
-
-        //路径平滑
-        Result<List<StraightPathItem>> straightPathQuery = query.findStraightPath(startResult.getNearestPos(), endResult.getNearestPos(), path.result, Integer.MAX_VALUE, 0);
-        if (straightPathQuery.failed() || straightPathQuery.result == null) {
-            LOGGER.info("straight path status is {}", straightPathQuery.status);
-            return Collections.emptyList();
-        }
-        List<StraightPathItem> straightPath = straightPathQuery.result;
-        for (StraightPathItem straightPathItem : straightPath) {
-            float[] p = new float[3];
-            System.arraycopy(straightPathItem.getPos(), 0, p, 0, straightPathItem.getPos().length);
-            pathRet.add(p);
-        }
-        return pathRet;
+        return detourQueries.find(context.query(), context.filter(), start, end, extents);
     }
 
     @Override
@@ -264,32 +166,7 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] raycast(float[] start, float[] end, float[] extents) {
-        NavMeshQuery query = query();
-        QueryFilter filter = filter();
-        Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
-        if (startQuery.failed() || startQuery.result == null) {
-            throw new IllegalArgumentException("not find nearestPoly");
-        }
-        FindNearestPolyResult startResult = startQuery.result;
-        if (startResult.getNearestRef() == 0) {
-            throw new IllegalArgumentException("not find nearestPoly");
-        }
-        float[] hitPoint = null;
-
-        Result<RaycastHit> hitQuery = query.raycast(startResult.getNearestRef(), startResult.getNearestPos(), end, filter, 0, 0);
-        if (hitQuery.failed() || hitQuery.result == null) {
-            throw new IllegalStateException("raycast failed");
-        }
-        RaycastHit hitReasult = hitQuery.result;
-        if (hitReasult.t > 1) {
-            return end;
-        } else {
-            hitPoint = new float[3];
-            hitPoint[0] = start[0] + (end[0] - start[0]) * hitReasult.t;
-            hitPoint[1] = start[1] + (end[1] - start[1]) * hitReasult.t;
-            hitPoint[2] = start[2] + (end[2] - start[2]) * hitReasult.t;
-        }
-        return hitPoint;
+        return detourQueries.raycast(context.query(), context.filter(), start, end, extents);
     }
 
     @Override
@@ -311,14 +188,7 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] findNearest(float[] point) {
-        NavMeshQuery query = query();
-        QueryFilter filter = filter();
-        Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
-        if (queryResult.failed() || queryResult.result == null) {
-            return null;
-        }
-        FindNearestPolyResult result = queryResult.result;
-        return result.getNearestPos();
+        return findNearest(point, extents);
     }
 
     @Override
@@ -330,14 +200,7 @@ public class Easy3dNav implements EasyNavFunc {
 
     @Override
     public float[] findNearest(float[] point, float[] extents) {
-        NavMeshQuery query = query();
-        QueryFilter filter = filter();
-        Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
-        if (queryResult.failed() || queryResult.result == null) {
-            return null;
-        }
-        FindNearestPolyResult result = queryResult.result;
-        return result.getNearestPos();
+        return detourQueries.findNearest(context.query(), context.filter(), point, extents);
     }
 
     @Override

@@ -2,6 +2,8 @@
 # Easy3dNav [![Build Status](https://travis-ci.org/SilenceSu/Easy3dNav.svg?branch=master)](https://travis-ci.org/SilenceSu/recastNav) [![maven](https://maven-badges.herokuapp.com/maven-central/com.github.silencesu/Easy3dNav/badge.svg)](https://search.maven.org/search?q=Easy3dNav)
 基于 recast4j 封装的 Java 版本 3D 游戏寻路组件，保留简单的 `find`、`raycast`、`findNearest` API，并通过官方 `org.recast4j:detour` 依赖提供底层 NavMesh 查询能力。
 
+旧兼容类 `RecastNav` 已移除，请统一使用 `Easy3dNav`。
+
 
 ### 使用
 ````

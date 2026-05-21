@@ -2,7 +2,7 @@
 
 ## 项目结构与模块组织
 
-Easy3dNav 是一个基于 Java 8 和 Maven 的 3D NavMesh 寻路库。核心 API 位于 `src/main/java/com/github/silencesu/Easy3dNav`，主要包括 `Easy3dNav`、`EasyNavFunc`、`RecastNav` 和 `Vector3f`。底层 Detour 查询能力来自官方依赖 `org.recast4j:detour`；本仓库只保留 Easy3dNav 封装和 `src/main/java/com/github/silencesu/Easy3dNav/io` 下的 U3D/CritterAI 读取适配层。测试和示例代码放在 `src/test/java`。仓库没有独立资源目录，除非用于小型测试夹具，否则不要提交本地导出的 `.navmesh` 文件。
+Easy3dNav 是一个基于 Java 8 和 Maven 的 3D NavMesh 寻路库。核心 API 位于 `src/main/java/com/github/silencesu/Easy3dNav`，主要包括 `Easy3dNav`、`EasyNavFunc` 和 `Vector3f`。底层 Detour 查询能力来自官方依赖 `org.recast4j:detour`；`io` 包保留 U3D/CritterAI 读取适配层，`internal` 包放查询上下文和 Detour 调用辅助，不作为稳定公开 API。测试和示例代码放在 `src/test/java`。仓库没有独立资源目录，除非用于小型测试夹具，否则不要提交本地导出的 `.navmesh` 文件。
 
 ## 构建、测试与开发命令
 

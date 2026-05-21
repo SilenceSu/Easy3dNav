@@ -58,6 +58,7 @@ U3D/CritterAI 数据兼容是项目核心价值之一。任何加载逻辑、坐
 - 删除 `com.github.silencesu.Easy3dNav.detour` 复制源码。
 - 新增 Easy3dNav 专用 U3D reader 适配层。
 - 增加动态 NavMesh fixture 单测。
+- 删除废弃兼容类 `RecastNav`，统一公开入口为 `Easy3dNav`。
 
 验收标准：
 

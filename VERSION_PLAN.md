@@ -19,22 +19,34 @@
 - 新增 `nav.path()` 分组入口，提供 `isReachable` 可达性判断。
 - 新增 `nav.random()` 分组入口，提供整图、附近和范围内随机可走点。
 - 新增 `hasWalkableAround`、`distanceToWall`、`nearestWall`，覆盖范围可走性和基础墙体查询。
+- 补充 `init(File)` 文件加载入口，保留 `init(String)` 兼容用法。
 
 ## 3. 2.0 待实现清单
 
-按优先级逐项推进：
+按“先补公共参数和高频查询，再补调试与文档收尾”的顺序推进。
 
-- [ ] 分组 API：后续补充 `nav.debug()`，避免 `Easy3dNav` 堆积过多方法。
-- [ ] `NavOptions`：统一承载 `extents`、`maxStraightPath`、straight path options、find path options 等查询参数。
-- [ ] 路径能力：提供支持 `NavOptions` 的路径查询入口。
-- [ ] 墙体与边界：后续封装 `getWallSegments(point)` 等调试/可视化能力。
+### 3.1 2.0 可继续处理
+
+- [ ] `NavOptions`：统一承载 `extents`、`maxStraightPath`、straight path options、find path options、raycast limit 等查询参数。
+- [ ] 路径能力：提供支持 `NavOptions` 的路径查询入口，例如 `nav.path().find(start, end, options)`。
+- [ ] 移动约束：封装 `moveAlongSurface(start, end)`，用于服务端移动校验、贴地修正和防穿墙。
 - [ ] 过滤器与区域代价：设计 `NavProfile` 或等价方案，支持 include flags、exclude flags、area cost 和自定义过滤器组合。
-- [ ] 范围查询：后续封装候选点列表、`findLocalNeighbourhood(center, radius)` 等高级范围能力。
-- [ ] 加载入口：增加 `init(File)`、`init(InputStream)`、`init(ByteBuffer)`，并区分 U3D 与 recast4j 标准格式加载。
+- [ ] 范围查询：在已完成随机点基础上，补充候选点列表、`findLocalNeighbourhood(center, radius)` 等业务可直接消费的范围能力。
+- [ ] 加载格式：明确当前 U3D/CritterAI 与 recast4j 标准格式的配置方式，暂不扩展更多加载入口。
+- [ ] 分组 API：补充 `nav.debug()`，承载调试、可视化和 metadata 能力，避免 `Easy3dNav` 堆积过多方法。
+- [ ] 墙体与边界：将 `getWallSegments(point)` 等边界线段能力放入 `nav.debug()`，只作为调试/可视化接口。
 - [ ] 调试信息：提供 NavMesh metadata，例如 tile 数量、polygon 数量、顶点数量、bounds。
 - [ ] 返回语义：统一空路径、不可达、找不到 polygon、非法参数等失败表现。
 - [ ] 测试补齐：每个新增 API 至少覆盖成功、失败和边界场景；避免依赖本机绝对路径。
 - [ ] 文档示例：README 增加分组 API、加载、线程安全和常见失败原因说明。
+
+### 3.2 2.0 暂不处理
+
+- [ ] 分片寻路：不封装 `initSlicedFindPath`、`updateSlicedFindPath`、`finalizeSlicedFindPath`、`finalizeSlicedFindPathPartial`。
+- [ ] 分块加载和动态地图：不封装 `addTile`、`removeTile`、`updateTile` 等 tile 增删改能力。
+- [ ] 动态区域修改：不封装运行时 `setPolyFlags`、`setPolyArea` 等会改变 NavMesh 状态的能力。
+- [ ] 流式和内存加载：不新增 `init(InputStream)`、`init(ByteBuffer)`，等确实需要资源包、对象存储或内存缓存加载时再设计。
+- [ ] 更高版本升级：暂不升级 Java 11/17，也不升级到 recast4j 更高版本。
 
 ## 4. API 设计约束
 

@@ -12,6 +12,7 @@ import com.github.silencesu.Easy3dNav.io.NavMeshLoader;
 import org.recast4j.detour.MeshTile;
 import org.recast4j.detour.NavMesh;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,21 +65,30 @@ public class Easy3dNav implements EasyNavFunc {
     }
 
     /**
-     * 初始化寻路需要参数
+     * 通过文件路径初始化 NavMesh。
      *
-     * @param filePath
+     * @param filePath NavMesh 文件路径
      */
     public void init(String filePath) throws IOException {
+        init(new File(filePath));
+    }
 
+    /**
+     * 通过文件对象初始化 NavMesh。
+     *
+     * <p>该入口只负责文件级加载；流式加载、内存加载和格式自动识别暂不放入 2.0，避免加载语义过早复杂化。</p>
+     *
+     * @param file NavMesh 文件
+     */
+    public void init(File file) throws IOException {
         clearThreadLocalQuery();
 
-        NavMesh mesh = navMeshLoader.load(filePath, useU3dData);
+        NavMesh mesh = navMeshLoader.load(file, useU3dData);
         context.reset(mesh);
 
         if (printMeshInfo) {
             printMeshInfo(mesh);
         }
-
     }
 
     /**

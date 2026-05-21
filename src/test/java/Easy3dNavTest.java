@@ -48,6 +48,19 @@ public class Easy3dNavTest {
     }
 
     @Test
+    public void loadsU3dMeshFromFileAndFindsPath() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(navmesh);
+
+        List<float[]> path = nav.find(new float[]{1f, 0f, 1f}, new float[]{9f, 0f, 9f}, new float[]{2f, 4f, 2f});
+
+        assertFalse(path.isEmpty());
+        assertArrayEquals(new float[]{1f, 0f, 1f}, path.get(0), 0.001f);
+        assertArrayEquals(new float[]{9f, 0f, 9f}, path.get(path.size() - 1), 0.001f);
+    }
+
+    @Test
     public void returnsEmptyPathWhenNoPolygonIsFound() throws Exception {
         File navmesh = writeU3dFixture();
         Easy3dNav nav = new Easy3dNav();

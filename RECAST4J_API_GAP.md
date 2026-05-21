@@ -17,7 +17,7 @@
 | 射线检测 | 部分覆盖 | 已封装基础 `raycast`，但未暴露 `RaycastHit` 的 path、cost、法线和 `DT_RAYCAST_USE_COSTS`。 |
 | 基础位置查询 | 大部分覆盖 | 已封装最近点、可走性、高度；未封装 `closestPointOnPolyBoundary` 和 polygon ref 有效性查询。 |
 | 随机点 | 大部分覆盖 | 已封装整图、附近、范围内随机点；未暴露自定义 `PolygonByCircleConstraint` 和随机源配置。 |
-| 范围查询 | 部分覆盖 | 仅封装 `hasWalkableAround` 布尔判断；未暴露 polygon refs、parent refs、costs、局部邻域和 AABB 查询结果。 |
+| 范围查询 | 部分覆盖 | 已封装 `hasWalkableAround` 布尔判断和 `findLocalNeighbourhood` 局部 polygon 几何结果；未暴露 polygon refs、parent refs、costs、自定义形状和 AABB 查询结果。 |
 | 墙体与边界 | 部分覆盖 | 已封装最近墙体距离、命中信息和 wall segment 列表；不暴露 portal refs 或 polygon refs。 |
 | 移动约束 | 已覆盖 | 已封装 `moveAlongSurface` 返回实际可移动位置；未暴露 visited polygon refs 或 `MoveAlongSurfaceResult`。 |
 | 分片寻路 | 未覆盖 | sliced path 全部未封装。 |
@@ -46,7 +46,7 @@
 | `findRandomPointAroundCircle(..., PolygonByCircleConstraint)` | 无 | 未覆盖 | 不支持自定义圆形约束。 |
 | `findPolysAroundCircle` | `nav.query().hasWalkableAround(...)` | 部分覆盖 | 只返回布尔值，不返回 refs、parent refs、costs。 |
 | `findPolysAroundShape` | 无 | 未覆盖 | 无自定义形状范围查询。 |
-| `findLocalNeighbourhood` | 无 | 未覆盖 | 无局部邻域 polygon 查询。 |
+| `findLocalNeighbourhood` | `nav.query().findLocalNeighbourhood(...)` | 部分覆盖 | 返回自有 `NavLocalPolygon` 几何信息，不暴露 refs、parent refs 或 Detour 原始 result。 |
 | `queryPolygons` | 无 | 未覆盖 | 无 AABB polygon 查询。 |
 | `queryTiles` | 无 | 未覆盖 | 无 AABB tile 查询。 |
 | `getPolyWallSegments` | `nav.debug().getWallSegments(...)` | 部分覆盖 | 返回自有 `NavWallSegment`，不暴露 portal refs、polygon refs 或 Detour 原始 result。 |
@@ -98,6 +98,6 @@
 | --- | --- | --- | --- |
 | `MeshSetReader.read32Bit(InputStream, ...)` | `init(String)`、`init(File)` 内部使用 | 部分覆盖 | 不公开 `InputStream` 加载。 |
 | `MeshSetReader.read32Bit(ByteBuffer, ...)` | 无 | 未覆盖 | 不公开 `ByteBuffer` 加载。 |
-| recast4j 标准格式读取 | `setUseU3dData(false)` 后加载 | 部分覆盖 | 格式选择通过布尔值表达，不是显式格式 API。 |
-| U3D/CritterAI 格式读取 | 默认加载 | 已覆盖 | 只作为当前默认格式暴露。 |
+| recast4j 标准格式读取 | `setUseU3dData(false)` 后通过 `init(String)`、`init(File)` 加载 | 部分覆盖 | 格式选择通过布尔值表达，不是显式格式 API；暂不做自动识别。 |
+| U3D/CritterAI 格式读取 | 默认 `setUseU3dData(true)` 后通过 `init(String)`、`init(File)` 加载 | 已覆盖 | 只作为当前默认格式暴露。 |
 | NavMesh 写回/导出 | 无 | 未覆盖 | 无 writer 或导出入口。 |

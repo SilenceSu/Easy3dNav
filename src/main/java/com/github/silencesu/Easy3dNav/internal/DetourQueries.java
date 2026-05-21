@@ -1,21 +1,27 @@
 package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavLocalPolygon;
 import com.github.silencesu.Easy3dNav.api.NavWallSegment;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
 import org.recast4j.detour.ClosestPointOnPolyResult;
 import org.recast4j.detour.FindDistanceToWallResult;
+import org.recast4j.detour.FindLocalNeighbourhoodResult;
 import org.recast4j.detour.FindNearestPolyResult;
 import org.recast4j.detour.FindPolysAroundResult;
 import org.recast4j.detour.FindRandomPointResult;
 import org.recast4j.detour.GetPolyWallSegmentsResult;
+import org.recast4j.detour.MeshTile;
 import org.recast4j.detour.MoveAlongSurfaceResult;
+import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshQuery;
+import org.recast4j.detour.Poly;
 import org.recast4j.detour.QueryFilter;
 import org.recast4j.detour.RaycastHit;
 import org.recast4j.detour.Result;
 import org.recast4j.detour.Status;
 import org.recast4j.detour.StraightPathItem;
+import org.recast4j.detour.Tupple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -332,6 +338,38 @@ public class DetourQueries {
     }
 
     /**
+     * 查询中心点附近连通的局部邻域 polygon。
+     *
+     * <p>Detour 返回 refs 和 parentRefs。Easy3dNav 对外隐藏这些内部编号，只把每个 ref 转换成
+     * NavLocalPolygon 的几何信息，供业务做局部范围分析或可视化。</p>
+     */
+    public List<NavLocalPolygon> findLocalNeighbourhood(NavMeshQuery query, QueryFilter filter, float[] center,
+                                                        float[] extents, float radius) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, center, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || invalidRadius(radius)) {
+            return Collections.emptyList();
+        }
+
+        Result<FindLocalNeighbourhoodResult> neighbourhoodQuery = query.findLocalNeighbourhood(
+                nearest.getNearestRef(), nearest.getNearestPos(), radius, filter);
+        if (neighbourhoodQuery.failed() || neighbourhoodQuery.result == null
+                || neighbourhoodQuery.result.getRefs() == null) {
+            return Collections.emptyList();
+        }
+
+        NavMesh navMesh = query.getAttachedNavMesh();
+        List<NavLocalPolygon> polygons = new ArrayList<>();
+        for (Long ref : neighbourhoodQuery.result.getRefs()) {
+            NavLocalPolygon polygon = toLocalPolygon(navMesh, ref);
+            if (polygon == null) {
+                return Collections.emptyList();
+            }
+            polygons.add(polygon);
+        }
+        return polygons;
+    }
+
+    /**
      * 查询点到最近墙体或边界的距离。
      */
     public Float distanceToWall(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents,
@@ -431,5 +469,56 @@ public class DetourQueries {
 
     private Vector3f toVector3f(float[] point, int offset) {
         return new Vector3f(point[offset], point[offset + 1], point[offset + 2]);
+    }
+
+    private NavLocalPolygon toLocalPolygon(NavMesh navMesh, Long ref) {
+        if (navMesh == null || ref == null || ref == 0L) {
+            return null;
+        }
+
+        Result<Tupple2<MeshTile, Poly>> tileAndPoly = navMesh.getTileAndPolyByRef(ref);
+        if (tileAndPoly.failed() || tileAndPoly.result == null) {
+            return null;
+        }
+        MeshTile tile = tileAndPoly.result.first;
+        Poly poly = tileAndPoly.result.second;
+        if (tile == null || tile.data == null || tile.data.verts == null || poly == null || poly.vertCount <= 0) {
+            return null;
+        }
+
+        List<Vector3f> vertices = new ArrayList<>();
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        float sumX = 0f;
+        float sumY = 0f;
+        float sumZ = 0f;
+
+        for (int i = 0; i < poly.vertCount; i++) {
+            int vertexIndex = poly.verts[i] * 3;
+            if (vertexIndex < 0 || vertexIndex + 2 >= tile.data.verts.length) {
+                return null;
+            }
+            Vector3f vertex = new Vector3f(tile.data.verts[vertexIndex], tile.data.verts[vertexIndex + 1],
+                    tile.data.verts[vertexIndex + 2]);
+            vertices.add(vertex);
+            minX = Math.min(minX, vertex.getX());
+            minY = Math.min(minY, vertex.getY());
+            minZ = Math.min(minZ, vertex.getZ());
+            maxX = Math.max(maxX, vertex.getX());
+            maxY = Math.max(maxY, vertex.getY());
+            maxZ = Math.max(maxZ, vertex.getZ());
+            sumX += vertex.getX();
+            sumY += vertex.getY();
+            sumZ += vertex.getZ();
+        }
+
+        Vector3f center = new Vector3f(sumX / vertices.size(), sumY / vertices.size(), sumZ / vertices.size());
+        Vector3f boundsMin = new Vector3f(minX, minY, minZ);
+        Vector3f boundsMax = new Vector3f(maxX, maxY, maxZ);
+        return new NavLocalPolygon(center, vertices, boundsMin, boundsMax);
     }
 }

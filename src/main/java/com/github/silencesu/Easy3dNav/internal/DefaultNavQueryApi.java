@@ -1,10 +1,12 @@
 package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavLocalPolygon;
 import com.github.silencesu.Easy3dNav.api.NavOptions;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -52,6 +54,13 @@ public class DefaultNavQueryApi implements NavQueryApi {
     public boolean hasWalkableAround(Vector3f center, float radius) {
         return detourQueries.hasWalkableAround(context.query(), context.filter(), toFloatArray(center),
                 defaultExtents(), radius);
+    }
+
+    @Override
+    public List<NavLocalPolygon> findLocalNeighbourhood(Vector3f center, float radius, NavOptions options) {
+        NavOptions safeOptions = optionsOrDefault(options);
+        return detourQueries.findLocalNeighbourhood(context.query(), context.filter(), toFloatArray(center),
+                extents(safeOptions), radius);
     }
 
     @Override

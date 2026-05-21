@@ -26,6 +26,7 @@
 - 新增 `nav.debug()` 分组入口，承载调试、可视化和 NavMesh metadata 能力。
 - 新增 `debug().getWallSegments(point, options)`，封装 Detour `getPolyWallSegments` 并返回自有 `NavWallSegment`。
 - 新增 `debug().meshInfo()`，提供结构化地图信息；旧 `setPrintMeshInfo(true)` 保留为兼容空实现，不再触发初始化打印。
+- 新增 `nav.query().findLocalNeighbourhood(center, radius, options)`，返回中心点附近连通的局部 NavMesh polygon 几何信息。
 - 统一返回语义：列表型失败返回空列表，点/数值型失败返回 `null`，布尔型失败返回 `false`，未初始化抛出 `IllegalStateException`。
 
 ## 3. 2.0 待实现清单
@@ -34,9 +35,8 @@
 
 ### 3.1 2.0 可继续处理
 
-- [ ] 过滤器与区域代价：设计 `NavProfile` 或等价方案，支持 include flags、exclude flags、area cost 和自定义过滤器组合。
-- [ ] 范围查询：在已完成随机点基础上，补充候选点列表、`findLocalNeighbourhood(center, radius)` 等业务可直接消费的范围能力。
-- [ ] 加载格式：明确当前 U3D/CritterAI 与 recast4j 标准格式的配置方式，暂不扩展更多加载入口。
+- [x] 范围查询：在已完成随机点基础上，补充 `findLocalNeighbourhood(center, radius)`，返回业务可直接消费的局部 NavMesh polygon 列表。
+- [x] 加载格式：明确当前 U3D/CritterAI 与 recast4j 标准格式的配置方式，暂不扩展更多加载入口。
 - [x] 分组 API：补充 `nav.debug()`，承载调试、可视化和 metadata 能力，避免 `Easy3dNav` 堆积过多方法。
 - [x] 墙体与边界：将 `getWallSegments(point)` 等边界线段能力放入 `nav.debug()`，只作为调试/可视化接口。
 - [x] 调试信息：提供 NavMesh metadata，例如 tile 数量、polygon 数量、顶点数量、bounds。
@@ -49,6 +49,7 @@
 - [ ] 分片寻路：不封装 `initSlicedFindPath`、`updateSlicedFindPath`、`finalizeSlicedFindPath`、`finalizeSlicedFindPathPartial`。
 - [ ] 分块加载和动态地图：不封装 `addTile`、`removeTile`、`updateTile` 等 tile 增删改能力。
 - [ ] 动态区域修改：不封装运行时 `setPolyFlags`、`setPolyArea` 等会改变 NavMesh 状态的能力。
+- [ ] 过滤器与区域代价：暂不设计 `NavProfile` 或等价方案，继续使用默认 `QueryFilter`；include flags、exclude flags、area cost 和自定义过滤器组合后续确有需求再处理。
 - [ ] 流式和内存加载：不新增 `init(InputStream)`、`init(ByteBuffer)`，等确实需要资源包、对象存储或内存缓存加载时再设计。
 - [ ] 更高版本升级：暂不升级 Java 11/17，也不升级到 recast4j 更高版本。
 

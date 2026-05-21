@@ -1,6 +1,7 @@
 import com.github.silencesu.Easy3dNav.Easy3dNav;
 import com.github.silencesu.Easy3dNav.Vector3f;
 import com.github.silencesu.Easy3dNav.api.NavDebugApi;
+import com.github.silencesu.Easy3dNav.api.NavLocalPolygon;
 import com.github.silencesu.Easy3dNav.api.NavMeshInfo;
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
 import com.github.silencesu.Easy3dNav.api.NavOptions;
@@ -324,6 +325,7 @@ public class Easy3dNavTest {
         assertNoFloatArrayInPublicMethods(NavWallHit.class);
         assertNoFloatArrayInPublicMethods(NavDebugApi.class);
         assertNoFloatArrayInPublicMethods(NavWallSegment.class);
+        assertNoFloatArrayInPublicMethods(NavLocalPolygon.class);
         assertNoFloatArrayInPublicMethods(NavMeshInfo.class);
         assertNoRecast4jTypesInPublicMethods(NavOptions.class);
         assertNoRecast4jTypesInPublicMethods(NavOptions.Builder.class);
@@ -333,6 +335,7 @@ public class Easy3dNavTest {
         assertNoRecast4jTypesInPublicMethods(NavWallHit.class);
         assertNoRecast4jTypesInPublicMethods(NavDebugApi.class);
         assertNoRecast4jTypesInPublicMethods(NavWallSegment.class);
+        assertNoRecast4jTypesInPublicMethods(NavLocalPolygon.class);
         assertNoRecast4jTypesInPublicMethods(NavMeshInfo.class);
         assertNoPublicMethod(NavDebugApi.class, "printMeshInfo");
     }
@@ -384,6 +387,42 @@ public class Easy3dNavTest {
         assertTrue(nav.query().hasWalkableAround(new Vector3f(5f, 0f, 5f), 3f));
         assertFalse(nav.query().hasWalkableAround(new Vector3f(5f, 0f, 5f), 0f));
         assertFalse(nav.query().hasWalkableAround(new Vector3f(100f, 0f, 100f), 3f));
+    }
+
+    @Test
+    public void queryApiReturnsLocalNeighbourhoodPolygons() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        List<NavLocalPolygon> polygons = nav.query().findLocalNeighbourhood(new Vector3f(5f, 0f, 5f), 3f);
+
+        assertEquals(1, polygons.size());
+        assertLocalPolygonInFlatMesh(polygons.get(0), 10f);
+    }
+
+    @Test
+    public void queryApiReturnsEmptyLocalNeighbourhoodForInvalidInputs() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        assertTrue(nav.query().findLocalNeighbourhood(null, 3f).isEmpty());
+        assertTrue(nav.query().findLocalNeighbourhood(new Vector3f(5f, 0f, 5f), 0f).isEmpty());
+        assertTrue(nav.query().findLocalNeighbourhood(new Vector3f(100f, 0f, 100f), 3f).isEmpty());
+    }
+
+    @Test
+    public void queryApiFindLocalNeighbourhoodUsesNavOptionsExtents() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.setExtents(new float[]{0.1f, 0.1f, 0.1f});
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Vector3f center = new Vector3f(-1f, 0f, 1f);
+        NavOptions options = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+
+        assertTrue(nav.query().findLocalNeighbourhood(center, 3f).isEmpty());
+        List<NavLocalPolygon> polygons = nav.query().findLocalNeighbourhood(center, 3f, options);
+
+        assertFalse(polygons.isEmpty());
+        assertLocalPolygonInFlatMesh(polygons.get(0), 10f);
     }
 
     @Test
@@ -439,6 +478,8 @@ public class Easy3dNavTest {
         assertNull(nav.random().pointWithin(point, 0f));
         assertFalse(nav.query().hasWalkableAround(null, 3f));
         assertFalse(nav.query().hasWalkableAround(point, 0f));
+        assertTrue(nav.query().findLocalNeighbourhood(null, 3f).isEmpty());
+        assertTrue(nav.query().findLocalNeighbourhood(point, 0f).isEmpty());
         assertNull(nav.query().distanceToWall(null, 10f));
         assertNull(nav.query().nearestWall(point, 0f));
         assertTrue(nav.debug().getWallSegments(null).isEmpty());
@@ -703,5 +744,16 @@ public class Easy3dNavTest {
         assertNotNull(segment);
         assertVectorInFlatMesh(segment.getStart(), size);
         assertVectorInFlatMesh(segment.getEnd(), size);
+    }
+
+    private void assertLocalPolygonInFlatMesh(NavLocalPolygon polygon, float size) {
+        assertNotNull(polygon);
+        assertVectorInFlatMesh(polygon.getCenter(), size);
+        assertEquals(4, polygon.getVertices().size());
+        for (Vector3f vertex : polygon.getVertices()) {
+            assertVectorInFlatMesh(vertex, size);
+        }
+        assertVectorEquals(new Vector3f(0f, 0f, 0f), polygon.getBoundsMin());
+        assertVectorEquals(new Vector3f(size, 0f, size), polygon.getBoundsMax());
     }
 }

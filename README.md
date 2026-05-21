@@ -60,6 +60,7 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 
     //范围与墙体查询
     boolean hasArea = nav.query().hasWalkableAround(point, 3f);
+    List<NavLocalPolygon> localPolygons = nav.query().findLocalNeighbourhood(point, 5f);
     Float wallDistance = nav.query().distanceToWall(point, 5f);
     NavWallHit wall = nav.query().nearestWall(point, 5f);
 
@@ -78,11 +79,22 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 
 `moveAlongSurface` 用于服务端局部移动约束，例如防止客户端一步移动穿墙；它不替代完整寻路，也不保证自动修正到 NavMesh 表面高度。需要贴地高度时，可继续使用 `nav.query().getHeight(moved)` 或 `nav.query().closestPoint(moved)`。
 
+`findLocalNeighbourhood` 返回中心点附近连通的 NavMesh polygon 几何信息，可用于局部范围分析或可视化。结果是导航网格的简化 polygon，不等于原始场景模型网格；方法不会暴露 Detour polygon ref 或 parent ref。
+
+### 加载格式
+
+Easy3dNav 当前只提供文件路径和 `File` 两个加载入口：`init(String)`、`init(File)`。加载格式通过 `setUseU3dData(boolean)` 在初始化前选择：
+
+- 默认 `true`：读取 Unity/CritterAI 导出的 U3D `.navmesh` 格式，通常对应服务端使用的 `srv_*.navmesh` 文件。
+- 设置为 `false`：读取 recast4j 标准 MeshSet 格式。
+- 该开关必须在 `init(...)` 前设置；`init(...)` 后修改只会影响下一次加载。
+- 当前不提供 `InputStream`、`ByteBuffer` 加载，也不做格式自动识别。
+
 ### 返回语义
 
 公开 API 按返回类型表达普通查询失败：
 
-- 列表型查询返回空列表，例如 `find`、`nav.path().find`、`nav.debug().getWallSegments`。
+- 列表型查询返回空列表，例如 `find`、`nav.path().find`、`nav.query().findLocalNeighbourhood`、`nav.debug().getWallSegments`。
 - 点结果查询返回 `null`，例如 `closestPoint`、`moveAlongSurface`、`random().pointAround`。
 - 布尔查询返回 `false`，例如 `isWalkable`、`isReachable`、`hasWalkableAround`。
 - 数值查询返回 `null`，例如 `getHeight`、`distanceToWall`。
@@ -126,13 +138,13 @@ https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询、`nav.path()` 路径查询、`NavOptions`、`nav.random()` 随机点和 `nav.debug()` 调试接口。后续扩展优先围绕 Detour 查询能力补齐：
 
-- 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`distanceToWall`、`nearestWall` 和 `debug().getWallSegments`。
+- 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`findLocalNeighbourhood`、`distanceToWall`、`nearestWall` 和 `debug().getWallSegments`。
 - 路径控制：已增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、straight path options、find path options 和 raycast limit。
 - 移动约束：已增加 `moveAlongSurface`，用于服务端局部移动校验和防穿墙，返回实际可移动到的位置。
-- 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
-- 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin`，后续补充候选点列表、`findLocalNeighbourhood` 等高级范围能力。
+- 区域与过滤器：当前暂不扩展公开配置，继续使用默认 `QueryFilter`；不同单位类型、地形代价和区域屏蔽后续确有需求再单独设计。
+- 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin` 和 `nav.query().findLocalNeighbourhood`。
 - 调试与元数据：已增加 `debug().meshInfo()`，可查询 tile、polygon、vertex、detail triangle、BVTree node 和 bounds 摘要。
-- 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 热更新和更细粒度 tile 查询后续按需要再设计。
+- 加载与管理：已补充 `File` 加载入口，并明确 U3D/CritterAI 与 recast4j 标准 MeshSet 格式的配置方式；`InputStream`、`ByteBuffer`、tile 热更新和更细粒度 tile 查询后续按需要再设计。
 - 返回语义：已统一列表、点、布尔、数值和 metadata 查询在无结果、非法输入和未初始化场景下的表现。
 - 并发约定：`Easy3dNav` 加载后的 `NavMesh` 按只读数据共享；每个线程会自动持有独立的 `NavMeshQuery`。默认 `QueryFilter` 不做 ThreadLocal 隔离，由后续过滤器封装统一规划。`init`/重载地图不应与查询并发执行；使用线程池并频繁卸载或重载地图时，可调用 `clearThreadLocalQuery()` 清理当前线程缓存。
 

@@ -1,0 +1,22 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+context: |
+  OpenSpec 提案必须使用中文。
+  proposal.md、design.md、tasks.md、spec.md 中的标题、Requirement 名称、Scenario 名称、需求描述和场景描述都必须使用中文。
+  规范关键字 SHALL、MUST、GIVEN、WHEN、THEN、AND 可以保留英文，以兼容 OpenSpec 格式。
+  命令、文件路径、代码标识、依赖名、规范关键字和必要的英文术语可以保留英文。
+  如果执行提案会生成或修改代码，需要为新增类、公开方法、internal 实现类、复杂逻辑和 recast4j 调用流程补充清晰的中文注释。
+  注释要解释业务语义、线程安全边界、失败语义和关键 Detour 调用步骤，避免只写重复代码字面意思的无效注释。
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

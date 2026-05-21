@@ -17,18 +17,19 @@
 - 拆出 `internal/DetourQueries`、`internal/NavMeshContext` 和 `io/NavMeshLoader`，让 `Easy3dNav` 保持门面职责。
 - 新增 `nav.query()` 分组入口，提供 `isWalkable`、`closestPoint`、`getHeight` 基础位置查询。
 - 新增 `nav.path()` 分组入口，提供 `isReachable` 可达性判断。
+- 新增 `nav.random()` 分组入口，提供整图、附近和范围内随机可走点。
+- 新增 `hasWalkableAround`、`distanceToWall`、`nearestWall`，覆盖范围可走性和基础墙体查询。
 
 ## 3. 2.0 待实现清单
 
 按优先级逐项推进：
 
-- [ ] 分组 API：后续补充 `nav.sample()`、`nav.debug()`，避免 `Easy3dNav` 堆积过多方法。
+- [ ] 分组 API：后续补充 `nav.debug()`，避免 `Easy3dNav` 堆积过多方法。
 - [ ] `NavOptions`：统一承载 `extents`、`maxStraightPath`、straight path options、find path options 等查询参数。
 - [ ] 路径能力：提供支持 `NavOptions` 的路径查询入口。
-- [ ] 墙体与边界：封装 `findDistanceToWall(point, radius)` 和 `getWallSegments(point)`。
+- [ ] 墙体与边界：后续封装 `getWallSegments(point)` 等调试/可视化能力。
 - [ ] 过滤器与区域代价：设计 `NavProfile` 或等价方案，支持 include flags、exclude flags、area cost 和自定义过滤器组合。
-- [ ] 随机点：封装 `findRandomPoint()`、`findRandomPointAround(center, radius)`。
-- [ ] 范围查询：封装 `findPolysAroundCircle(center, radius)`、`findLocalNeighbourhood(center, radius)`。
+- [ ] 范围查询：后续封装候选点列表、`findLocalNeighbourhood(center, radius)` 等高级范围能力。
 - [ ] 加载入口：增加 `init(File)`、`init(InputStream)`、`init(ByteBuffer)`，并区分 U3D 与 recast4j 标准格式加载。
 - [ ] 调试信息：提供 NavMesh metadata，例如 tile 数量、polygon 数量、顶点数量、bounds。
 - [ ] 返回语义：统一空路径、不可达、找不到 polygon、非法参数等失败表现。
@@ -38,7 +39,7 @@
 ## 4. API 设计约束
 
 - `Easy3dNav` 只做总入口、生命周期管理和少量高频快捷方法。
-- 新能力优先放到分组 API 中，例如 `path()`、`query()`、`sample()`、`debug()`。
+- 新能力优先放到分组 API 中，例如 `path()`、`query()`、`random()`、`debug()`。
 - 新分组 API 优先使用 `Vector3f` 表达坐标，`float[]` 保留在旧快捷入口和 internal 实现中。
 - `EasyNavFunc` 保持克制，只放长期稳定的基础能力。
 - 简单 API 不暴露 recast4j 的 `NavMeshQuery`、`QueryFilter`、`Result`、tile、polygon ref 等类型。

@@ -2,6 +2,7 @@ package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
+import com.github.silencesu.Easy3dNav.api.NavWallHit;
 
 import java.util.function.Supplier;
 
@@ -59,6 +60,27 @@ public class DefaultNavQueryApi implements NavQueryApi {
     @Override
     public Float getHeight(Vector3f point, Vector3f extents) {
         return getHeightArray(toFloatArray(point), toFloatArray(extents));
+    }
+
+    @Override
+    public boolean hasWalkableAround(Vector3f center, float radius) {
+        return detourQueries.hasWalkableAround(context.query(), context.filter(), toFloatArray(center),
+                defaultExtents(), radius);
+    }
+
+    @Override
+    public Float distanceToWall(Vector3f point, float radius) {
+        NavWallHit hit = nearestWall(point, radius);
+        if (hit == null) {
+            return null;
+        }
+        return hit.getDistance();
+    }
+
+    @Override
+    public NavWallHit nearestWall(Vector3f point, float radius) {
+        return detourQueries.nearestWall(context.query(), context.filter(), toFloatArray(point), defaultExtents(),
+                radius);
     }
 
     private float[] defaultExtents() {

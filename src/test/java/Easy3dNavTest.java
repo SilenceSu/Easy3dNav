@@ -2,6 +2,8 @@ import com.github.silencesu.Easy3dNav.Easy3dNav;
 import com.github.silencesu.Easy3dNav.Vector3f;
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
+import com.github.silencesu.Easy3dNav.api.NavRandomApi;
+import com.github.silencesu.Easy3dNav.api.NavWallHit;
 import org.junit.Test;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
@@ -190,6 +192,95 @@ public class Easy3dNavTest {
     public void groupedApiInterfacesDoNotExposeFloatArrays() {
         assertNoFloatArrayInPublicMethods(NavQueryApi.class);
         assertNoFloatArrayInPublicMethods(NavPathApi.class);
+        assertNoFloatArrayInPublicMethods(NavRandomApi.class);
+        assertNoFloatArrayInPublicMethods(NavWallHit.class);
+        assertNoRecast4jTypesInPublicMethods(NavQueryApi.class);
+        assertNoRecast4jTypesInPublicMethods(NavPathApi.class);
+        assertNoRecast4jTypesInPublicMethods(NavRandomApi.class);
+        assertNoRecast4jTypesInPublicMethods(NavWallHit.class);
+    }
+
+    @Test
+    public void randomApiReturnsPointOrNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Easy3dNav empty = new Easy3dNav();
+        empty.init(writeEmptyU3dFixture().getAbsolutePath());
+
+        Vector3f point = nav.random().point();
+
+        assertVectorInFlatMesh(point, 10f);
+        assertNull(empty.random().point());
+    }
+
+    @Test
+    public void randomApiReturnsPointAroundOrNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        Vector3f point = nav.random().pointAround(new Vector3f(5f, 0f, 5f), 3f);
+        Vector3f missing = nav.random().pointAround(new Vector3f(100f, 0f, 100f), 3f);
+
+        assertVectorInFlatMesh(point, 10f);
+        assertNull(missing);
+    }
+
+    @Test
+    public void randomApiReturnsPointWithinOrNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        Vector3f point = nav.random().pointWithin(new Vector3f(5f, 0f, 5f), 3f);
+        Vector3f invalidRadius = nav.random().pointWithin(new Vector3f(5f, 0f, 5f), 0f);
+        Vector3f missing = nav.random().pointWithin(new Vector3f(100f, 0f, 100f), 3f);
+
+        assertVectorInFlatMesh(point, 10f);
+        assertNull(invalidRadius);
+        assertNull(missing);
+    }
+
+    @Test
+    public void queryApiReportsWalkableAround() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        assertTrue(nav.query().hasWalkableAround(new Vector3f(5f, 0f, 5f), 3f));
+        assertFalse(nav.query().hasWalkableAround(new Vector3f(5f, 0f, 5f), 0f));
+        assertFalse(nav.query().hasWalkableAround(new Vector3f(100f, 0f, 100f), 3f));
+    }
+
+    @Test
+    public void queryApiReturnsDistanceToWallOrNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        Float distance = nav.query().distanceToWall(new Vector3f(5f, 0f, 5f), 10f);
+        Float invalidRadius = nav.query().distanceToWall(new Vector3f(5f, 0f, 5f), 0f);
+        Float missing = nav.query().distanceToWall(new Vector3f(100f, 0f, 100f), 10f);
+
+        assertNotNull(distance);
+        assertTrue(distance >= 0f);
+        assertTrue(distance <= 5.1f);
+        assertNull(invalidRadius);
+        assertNull(missing);
+    }
+
+    @Test
+    public void queryApiReturnsNearestWallHitOrNull() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        NavWallHit hit = nav.query().nearestWall(new Vector3f(5f, 0f, 5f), 10f);
+        NavWallHit invalidRadius = nav.query().nearestWall(new Vector3f(5f, 0f, 5f), 0f);
+
+        assertNotNull(hit);
+        assertNotNull(hit.getDistance());
+        assertNotNull(hit.getPosition());
+        assertNotNull(hit.getNormal());
+        assertTrue(hit.getDistance() >= 0f);
+        assertTrue(hit.getPosition().getX() >= 0f && hit.getPosition().getX() <= 10f);
+        assertTrue(hit.getPosition().getZ() >= 0f && hit.getPosition().getZ() <= 10f);
+        assertNull(invalidRadius);
     }
 
     @Test
@@ -240,11 +331,29 @@ public class Easy3dNavTest {
         return file;
     }
 
+    private File writeEmptyU3dFixture() throws Exception {
+        File file = File.createTempFile("easy3dnav-empty-u3d-", ".navmesh");
+        file.deleteOnExit();
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            writeInt(out, 0x8802);
+            writeInt(out, 0);
+            writeFloat(out, 0f);
+            writeFloat(out, 0f);
+            writeFloat(out, 0f);
+            writeFloat(out, 10f);
+            writeFloat(out, 10f);
+            writeInt(out, 1);
+            writeInt(out, 1);
+            writeInt(out, 4);
+        }
+        return file;
+    }
+
     private MeshData createFlatMeshData(int size) {
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
         params.verts = new int[]{0, 0, 0, size, 0, 0, size, 0, size, 0, 0, size};
         params.vertCount = 4;
-        params.polys = new int[]{0, 1, 2, 3, 0x800f, 0x800f, 0x800f, 0x800f};
+        params.polys = new int[]{0, 3, 2, 1, 0x800f, 0x800f, 0x800f, 0x800f};
         params.polyFlags = new int[]{1};
         params.polyAreas = new int[]{0};
         params.polyCount = 1;
@@ -315,5 +424,26 @@ public class Easy3dNavTest {
                         parameterType.isArray() && parameterType.getComponentType() == float.class);
             }
         }
+    }
+
+    private void assertNoRecast4jTypesInPublicMethods(Class<?> apiClass) {
+        for (Method method : apiClass.getMethods()) {
+            assertFalse(method.getName() + " should not return recast4j type", isRecast4jType(method.getReturnType()));
+            for (Class<?> parameterType : method.getParameterTypes()) {
+                assertFalse(method.getName() + " should not accept recast4j type", isRecast4jType(parameterType));
+            }
+        }
+    }
+
+    private boolean isRecast4jType(Class<?> type) {
+        Package typePackage = type.getPackage();
+        return typePackage != null && typePackage.getName().startsWith("org.recast4j");
+    }
+
+    private void assertVectorInFlatMesh(Vector3f point, float size) {
+        assertNotNull(point);
+        assertTrue(point.getX() >= 0f && point.getX() <= size);
+        assertEquals(0f, point.getY(), 0.001f);
+        assertTrue(point.getZ() >= 0f && point.getZ() <= size);
     }
 }

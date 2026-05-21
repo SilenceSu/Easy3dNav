@@ -60,4 +60,31 @@ public interface NavQueryApi {
      * @return 表面高度；找不到有效 polygon 或高度查询失败时返回 null
      */
     Float getHeight(Vector3f point, Vector3f extents);
+
+    /**
+     * 判断中心点附近是否存在可走区域。
+     *
+     * @param center 中心点
+     * @param radius 查询半径
+     * @return 找到可走 polygon 返回 true；中心点无效、半径无效或查询失败时返回 false
+     */
+    boolean hasWalkableAround(Vector3f center, float radius);
+
+    /**
+     * 查询点到最近墙体或边界的距离。
+     *
+     * @param point  待查询点
+     * @param radius 查询半径
+     * @return 最近墙体距离；点无效、半径无效或查询失败时返回 null
+     */
+    Float distanceToWall(Vector3f point, float radius);
+
+    /**
+     * 查询最近墙体或边界的完整信息。
+     *
+     * @param point  待查询点
+     * @param radius 查询半径
+     * @return 最近墙体结果；点无效、半径无效或查询失败时返回 null
+     */
+    NavWallHit nearestWall(Vector3f point, float radius);
 }

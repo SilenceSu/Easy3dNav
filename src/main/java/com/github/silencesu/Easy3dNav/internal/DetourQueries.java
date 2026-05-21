@@ -1,7 +1,12 @@
 package com.github.silencesu.Easy3dNav.internal;
 
+import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavWallHit;
 import org.recast4j.detour.ClosestPointOnPolyResult;
+import org.recast4j.detour.FindDistanceToWallResult;
 import org.recast4j.detour.FindNearestPolyResult;
+import org.recast4j.detour.FindPolysAroundResult;
+import org.recast4j.detour.FindRandomPointResult;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
 import org.recast4j.detour.RaycastHit;
@@ -14,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 封装 recast4j Detour 的底层查询流程。
@@ -204,6 +210,109 @@ public class DetourQueries {
         return pathQuery.result.get(pathQuery.result.size() - 1) == endRef;
     }
 
+    /**
+     * 在整张 NavMesh 上随机取一个可走点。
+     *
+     * <p>Detour 返回随机 polygon ref 和坐标。Easy3dNav 对外只需要坐标，因此这里丢弃 ref，
+     * 并在查询失败、ref 无效或坐标为空时统一返回 null。</p>
+     */
+    public float[] randomPoint(NavMeshQuery query, QueryFilter filter) {
+        Result<FindRandomPointResult> randomQuery = query.findRandomPoint(filter, randomSource());
+        return randomPoint(randomQuery);
+    }
+
+    /**
+     * 在中心点附近随机取一个可走点。
+     *
+     * <p>findRandomPointAroundCircle 需要中心点所在 polygon ref，所以先通过默认 extents 定位中心点。
+     * radius 小于等于 0 时按失败处理，避免把无意义半径传给 Detour。</p>
+     */
+    public float[] randomPointAround(NavMeshQuery query, QueryFilter filter, float[] center, float[] extents,
+                                     float radius) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, center, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || invalidRadius(radius)) {
+            return null;
+        }
+
+        Result<FindRandomPointResult> randomQuery = query.findRandomPointAroundCircle(nearest.getNearestRef(),
+                nearest.getNearestPos(), radius, filter, randomSource());
+        return randomPoint(randomQuery);
+    }
+
+    /**
+     * 在指定圆形范围内随机取一个可走点。
+     *
+     * <p>该方法使用 recast4j 的 within circle 约束，语义上比 around circle 更适合“必须在半径内”
+     * 的业务，例如区域内随机刷怪或技能落点。</p>
+     */
+    public float[] randomPointWithin(NavMeshQuery query, QueryFilter filter, float[] center, float[] extents,
+                                     float radius) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, center, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || invalidRadius(radius)) {
+            return null;
+        }
+
+        Result<FindRandomPointResult> randomQuery = query.findRandomPointWithinCircle(nearest.getNearestRef(),
+                nearest.getNearestPos(), radius, filter, randomSource());
+        return randomPoint(randomQuery);
+    }
+
+    /**
+     * 判断中心点附近是否存在可走 polygon。
+     *
+     * <p>findPolysAroundCircle 返回 refs、parentRefs 和 costs。第一版公开 API 只需要布尔语义，
+     * 因此这里只检查 refs 是否非空，不把 Detour 的 polygon 结构暴露出去。</p>
+     */
+    public boolean hasWalkableAround(NavMeshQuery query, QueryFilter filter, float[] center, float[] extents,
+                                     float radius) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, center, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || invalidRadius(radius)) {
+            return false;
+        }
+
+        Result<FindPolysAroundResult> aroundQuery = query.findPolysAroundCircle(nearest.getNearestRef(),
+                nearest.getNearestPos(), radius, filter);
+        return !aroundQuery.failed() && aroundQuery.result != null && aroundQuery.result.getRefs() != null
+                && !aroundQuery.result.getRefs().isEmpty();
+    }
+
+    /**
+     * 查询点到最近墙体或边界的距离。
+     */
+    public Float distanceToWall(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents,
+                                float radius) {
+        NavWallHit hit = nearestWall(query, filter, point, extents, radius);
+        if (hit == null) {
+            return null;
+        }
+        return hit.getDistance();
+    }
+
+    /**
+     * 查询最近墙体或边界的完整信息。
+     *
+     * <p>findDistanceToWall 同时返回距离、墙点和法线。这里先定位点所在 polygon，再将 Detour 的
+     * float 数组结果转换成 Easy3dNav 的 NavWallHit，公开 API 不需要感知 FindDistanceToWallResult。</p>
+     */
+    public NavWallHit nearestWall(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents,
+                                  float radius) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, point, extents);
+        if (nearest == null || nearest.getNearestRef() == 0 || invalidRadius(radius)) {
+            return null;
+        }
+
+        Result<FindDistanceToWallResult> wallQuery = query.findDistanceToWall(nearest.getNearestRef(),
+                nearest.getNearestPos(), radius, filter);
+        if (wallQuery.failed() || wallQuery.result == null) {
+            return null;
+        }
+        FindDistanceToWallResult result = wallQuery.result;
+        if (result.getPosition() == null || result.getNormal() == null) {
+            return null;
+        }
+        return new NavWallHit(result.getDistance(), toVector3f(result.getPosition()), toVector3f(result.getNormal()));
+    }
+
     private FindNearestPolyResult findNearestPoly(NavMeshQuery query, QueryFilter filter, float[] point,
                                                   float[] extents) {
         if (point == null || extents == null) {
@@ -214,5 +323,24 @@ public class DetourQueries {
             return null;
         }
         return queryResult.result;
+    }
+
+    private float[] randomPoint(Result<FindRandomPointResult> randomQuery) {
+        if (randomQuery.failed() || randomQuery.result == null || randomQuery.result.getRandomRef() == 0) {
+            return null;
+        }
+        return randomQuery.result.getRandomPt();
+    }
+
+    private boolean invalidRadius(float radius) {
+        return radius <= 0f;
+    }
+
+    private NavMeshQuery.FRand randomSource() {
+        return new NavMeshQuery.FRand(ThreadLocalRandom.current().nextLong());
+    }
+
+    private Vector3f toVector3f(float[] point) {
+        return new Vector3f(point[0], point[1], point[2]);
     }
 }

@@ -2,8 +2,10 @@ package com.github.silencesu.Easy3dNav;
 
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
+import com.github.silencesu.Easy3dNav.api.NavRandomApi;
 import com.github.silencesu.Easy3dNav.internal.DefaultNavPathApi;
 import com.github.silencesu.Easy3dNav.internal.DefaultNavQueryApi;
+import com.github.silencesu.Easy3dNav.internal.DefaultNavRandomApi;
 import com.github.silencesu.Easy3dNav.internal.DetourQueries;
 import com.github.silencesu.Easy3dNav.internal.NavMeshContext;
 import com.github.silencesu.Easy3dNav.io.NavMeshLoader;
@@ -39,6 +41,7 @@ public class Easy3dNav implements EasyNavFunc {
     private float[] extents = {2.f, 2.f, 2.f};
     private final NavQueryApi queryApi = new DefaultNavQueryApi(context, detourQueries, () -> extents);
     private final NavPathApi pathApi = new DefaultNavPathApi(context, detourQueries, () -> extents);
+    private final NavRandomApi randomApi = new DefaultNavRandomApi(context, detourQueries, () -> extents);
 
 
     public Easy3dNav() {
@@ -101,6 +104,15 @@ public class Easy3dNav implements EasyNavFunc {
      */
     public NavPathApi path() {
         return pathApi;
+    }
+
+    /**
+     * 返回随机可走点分组 API。
+     *
+     * <p>该分组用于巡逻点、出生点和逃跑点等生成类能力。</p>
+     */
+    public NavRandomApi random() {
+        return randomApi;
     }
 
     /**

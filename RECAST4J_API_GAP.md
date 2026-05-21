@@ -116,14 +116,36 @@ Easy3dNav 当前可以通过 `findNearest` 或 `find` 间接判断，但缺少�
 
 | recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
 | --- | --- | --- | --- |
-| `findRandomPoint` | 未封装 | 在整个 NavMesh 上找随机点 | `findRandomPoint()` |
-| `findRandomPointAroundCircle` | 未封装 | 在某点附近找随机可走点 | `findRandomPointAround(center, radius)` |
-| `findRandomPointWithinCircle` | 未封装 | 在指定圆范围内找随机点 | `findRandomPointWithin(center, radius)` |
-| `findPolysAroundCircle` | 未封装 | 找圆形范围内相关 polygon | `findPolysAround(center, radius)` |
+| `findRandomPoint` | 已封装 | 在整个 NavMesh 上找随机点 | `nav.random().point()` |
+| `findRandomPointAroundCircle` | 已封装 | 在某点附近找随机可走点 | `nav.random().pointAround(center, radius)` |
+| `findRandomPointWithinCircle` | 已封装 | 在指定圆范围内找随机点 | `nav.random().pointWithin(center, radius)` |
+| `findPolysAroundCircle` | 内部使用 | 找圆形范围内相关 polygon | `hasWalkableAround(center, radius)` |
 | `findPolysAroundShape` | 未封装 | 找自定义形状范围内相关 polygon | 后续可选 |
 | `findLocalNeighbourhood` | 未封装 | 查找局部邻域 polygon | `findLocalNeighbourhood(center, radius)` |
 | `queryPolygons` | 未封装 | 查询 AABB 范围内 polygon | 内部或高级 API |
 | `queryTiles` | 未封装 | 查询 AABB 范围内 tile | 内部或调试 API |
+
+建议面向用户的封装：
+
+- `nav.random().point()`：在整张 NavMesh 上随机取一个可走点，返回 `Vector3f`，失败返回 `null`。
+- `nav.random().pointAround(center, radius)`：在中心点附近随机取一个可走点，适合巡逻、出生点、逃跑点。
+- `nav.random().pointWithin(center, radius)`：严格限制在指定圆形范围内取点，适合技能落点或区域内随机刷怪。
+- `nav.query().hasWalkableAround(center, radius)`：只判断范围内是否存在可走区域，适合轻量校验。
+
+封装原则：
+
+- 普通 API 返回 `Vector3f` 或 `List<Vector3f>`，不让用户处理 polygon ref、parent ref、cost 列表。
+- `findRandomPointAroundCircle` 需要先定位中心点所在 polygon，失败时直接返回 `null` 或空集合。
+- 范围查询底层可以使用 `findPolysAroundCircle`、`findLocalNeighbourhood`，但对外优先返回业务能直接使用的坐标点或布尔结果。
+- 随机函数可以先使用默认随机源；后续如需要可通过 `NavOptions` 支持传入 seed 或随机源。
+
+示例方向：
+
+```java
+Vector3f patrol = nav.random().pointAround(monsterPos, 20f);
+Vector3f spawn = nav.random().pointWithin(areaCenter, 10f);
+boolean hasArea = nav.query().hasWalkableAround(dropPos, 3f);
+```
 
 典型用途：
 
@@ -133,14 +155,44 @@ Easy3dNav 当前可以通过 `findNearest` 或 `find` 间接判断，但缺少�
 - 附近可走区域扫描。
 - 生成 AI 行为候选点。
 
-建议优先级：中高，适合放入 `2.2`。
+当前已完成整图随机点、附近随机点、范围内随机点和范围可走性布尔查询。后续可继续增加候选点列表或高级范围结果对象。
 
 ## 8. 墙体与边界查询
 
 | recast4j Detour 接口 | 当前状态 | 作用 | 建议封装 |
 | --- | --- | --- | --- |
-| `findDistanceToWall` | 未封装 | 查询点到最近墙或边界的距离 | `findDistanceToWall(point, radius)` |
+| `findDistanceToWall` | 已封装 | 查询点到最近墙或边界的距离 | `distanceToWall(point, radius)` / `nearestWall(point, radius)` |
 | `getPolyWallSegments` | 未封装 | 获取 polygon 墙边界线段 | `getWallSegments(point)` |
+
+建议面向用户的封装：
+
+- `nav.query().distanceToWall(point, radius)`：返回点到最近墙体或边界的距离，失败返回 `null`。
+- `nav.query().nearestWall(point, radius)`：返回最近墙体距离、墙点坐标和法线，适合脱困、贴边和出生点修正。
+- `nav.debug().wallSegments(point)`：返回附近边界线段，主要用于调试、可视化和问题排查。
+
+当前使用结果对象减少重复查询：
+
+```java
+NavWallHit hit = nav.query().nearestWall(point, radius);
+Float distance = hit.getDistance();
+Vector3f position = hit.getPosition();
+Vector3f normal = hit.getNormal();
+```
+
+封装原则：
+
+- 普通业务优先使用 `distanceToWall` 和 `nearestWall`，避免直接接触 wall segment 细节。
+- `getPolyWallSegments` 返回的信息更偏调试，不建议一开始放到核心查询 API 中。
+- `findDistanceToWall` 底层同样需要先定位点所在 polygon；点无效或范围内没有墙体时返回 `null`。
+- 墙体结果应明确坐标系仍与 Unity 一致，Y 轴向上。
+
+示例方向：
+
+```java
+Float distance = nav.query().distanceToWall(pos, 5f);
+NavWallHit hit = nav.query().nearestWall(pos, 5f);
+List<NavWallSegment> segments = nav.debug().wallSegments(pos);
+```
 
 典型用途：
 
@@ -150,7 +202,7 @@ Easy3dNav 当前可以通过 `findNearest` 或 `find` 间接判断，但缺少�
 - 调试 NavMesh 边界。
 - 做贴边或脱困逻辑。
 
-建议优先级：高，`findDistanceToWall` 适合放入 `2.1`。
+当前已完成 `distanceToWall` 和 `nearestWall`。`wallSegments` 更适合作为 debug 分组能力后续加入。
 
 ## 9. Filter 与区域代价
 
@@ -226,19 +278,21 @@ Easy3dNav 当前可以通过 `findNearest` 或 `find` 间接判断，但缺少�
 2. `isWalkable`
 3. `isReachable`
 4. `getHeight`
-5. `findDistanceToWall`
+5. `distanceToWall`
 6. `moveAlongSurface`
-7. `findRandomPointAround`
-8. `QueryFilter` / area cost 封装
-9. `InputStream` / `ByteBuffer` 加载
-10. tile 管理和动态区域
+7. `nearestWall`
+8. `random().pointAround`
+9. 范围候选点列表
+10. `QueryFilter` / area cost 封装
+11. `InputStream` / `ByteBuffer` 加载
+12. tile 管理和动态区域
 
 原因：
 
 - `NavOptions` 是后续扩展参数的基础。
 - `isWalkable`、`isReachable`、`getHeight` 是服务端业务最常用的判断类接口。
-- `findDistanceToWall` 和 `moveAlongSurface` 能提升移动校验和 AI 稳定性。
-- 随机点和范围查询主要服务 AI 行为，适合第二阶段扩展。
+- `distanceToWall`、`nearestWall` 和 `moveAlongSurface` 能提升移动校验、出生点修正和 AI 稳定性。
+- 随机点和范围查询主要服务 AI 行为，适合在墙体距离之后继续推进。
 - tile 管理涉及动态地图和更多状态变更，应在核心查询能力稳定后再做。
 
 ## 13. 版本映射建议

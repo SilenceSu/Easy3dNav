@@ -16,16 +16,21 @@ public interface NavQueryApi {
      * @param point 待检测坐标
      * @return 找到有效 polygon 返回 true，否则返回 false
      */
-    boolean isWalkable(Vector3f point);
+    default boolean isWalkable(Vector3f point) {
+        return isWalkable(point, NavOptions.defaults());
+    }
 
     /**
-     * 使用显式搜索范围判断点附近是否存在可行走 polygon。
+     * 使用 NavOptions 判断点附近是否存在可行走 polygon。
+     *
+     * <p>当前只使用 `NavOptions.extents`；`maxStraightPath`、`straightPathOptions`、
+     * `findPathOptions`、`raycastLimit` 对该 API 不生效。</p>
      *
      * @param point   待检测坐标
-     * @param extents 搜索范围
+     * @param options 本次查询参数；传 null 时使用默认参数
      * @return 找到有效 polygon 返回 true，否则返回 false
      */
-    boolean isWalkable(Vector3f point, Vector3f extents);
+    boolean isWalkable(Vector3f point, NavOptions options);
 
     /**
      * 使用默认搜索范围把坐标吸附到最近的 NavMesh 表面。
@@ -33,16 +38,21 @@ public interface NavQueryApi {
      * @param point 待修正坐标
      * @return 最近可行走点；找不到时返回 null
      */
-    Vector3f closestPoint(Vector3f point);
+    default Vector3f closestPoint(Vector3f point) {
+        return closestPoint(point, NavOptions.defaults());
+    }
 
     /**
-     * 使用显式搜索范围把坐标吸附到最近的 NavMesh 表面。
+     * 使用 NavOptions 把坐标吸附到最近的 NavMesh 表面。
+     *
+     * <p>当前只使用 `NavOptions.extents`；`maxStraightPath`、`straightPathOptions`、
+     * `findPathOptions`、`raycastLimit` 对该 API 不生效。</p>
      *
      * @param point   待修正坐标
-     * @param extents 搜索范围
+     * @param options 本次查询参数；传 null 时使用默认参数
      * @return 最近可行走点；找不到时返回 null
      */
-    Vector3f closestPoint(Vector3f point, Vector3f extents);
+    Vector3f closestPoint(Vector3f point, NavOptions options);
 
     /**
      * 使用默认搜索范围获取点附近 NavMesh 表面的高度。
@@ -50,19 +60,26 @@ public interface NavQueryApi {
      * @param point 待查询坐标
      * @return 表面高度；找不到有效 polygon 或高度查询失败时返回 null
      */
-    Float getHeight(Vector3f point);
+    default Float getHeight(Vector3f point) {
+        return getHeight(point, NavOptions.defaults());
+    }
 
     /**
-     * 使用显式搜索范围获取点附近 NavMesh 表面的高度。
+     * 使用 NavOptions 获取点附近 NavMesh 表面的高度。
+     *
+     * <p>当前只使用 `NavOptions.extents`；`maxStraightPath`、`straightPathOptions`、
+     * `findPathOptions`、`raycastLimit` 对该 API 不生效。</p>
      *
      * @param point   待查询坐标
-     * @param extents 搜索范围
+     * @param options 本次查询参数；传 null 时使用默认参数
      * @return 表面高度；找不到有效 polygon 或高度查询失败时返回 null
      */
-    Float getHeight(Vector3f point, Vector3f extents);
+    Float getHeight(Vector3f point, NavOptions options);
 
     /**
      * 判断中心点附近是否存在可走区域。
+     *
+     * <p>当前未接入 `NavOptions`，使用 Easy3dNav 默认搜索范围定位中心点。</p>
      *
      * @param center 中心点
      * @param radius 查询半径
@@ -73,6 +90,8 @@ public interface NavQueryApi {
     /**
      * 查询点到最近墙体或边界的距离。
      *
+     * <p>当前未接入 `NavOptions`，使用 Easy3dNav 默认搜索范围定位查询点。</p>
+     *
      * @param point  待查询点
      * @param radius 查询半径
      * @return 最近墙体距离；点无效、半径无效或查询失败时返回 null
@@ -81,6 +100,8 @@ public interface NavQueryApi {
 
     /**
      * 查询最近墙体或边界的完整信息。
+     *
+     * <p>当前未接入 `NavOptions`，使用 Easy3dNav 默认搜索范围定位查询点。</p>
      *
      * @param point  待查询点
      * @param radius 查询半径

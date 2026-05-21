@@ -1,6 +1,7 @@
 package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavOptions;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
 
@@ -33,33 +34,18 @@ public class DefaultNavQueryApi implements NavQueryApi {
     }
 
     @Override
-    public boolean isWalkable(Vector3f point) {
-        return isWalkableArray(toFloatArray(point), defaultExtents());
+    public boolean isWalkable(Vector3f point, NavOptions options) {
+        return isWalkableArray(toFloatArray(point), extents(optionsOrDefault(options)));
     }
 
     @Override
-    public boolean isWalkable(Vector3f point, Vector3f extents) {
-        return isWalkableArray(toFloatArray(point), toFloatArray(extents));
+    public Vector3f closestPoint(Vector3f point, NavOptions options) {
+        return toVector3f(closestPointArray(toFloatArray(point), extents(optionsOrDefault(options))));
     }
 
     @Override
-    public Vector3f closestPoint(Vector3f point) {
-        return toVector3f(closestPointArray(toFloatArray(point), defaultExtents()));
-    }
-
-    @Override
-    public Vector3f closestPoint(Vector3f point, Vector3f extents) {
-        return toVector3f(closestPointArray(toFloatArray(point), toFloatArray(extents)));
-    }
-
-    @Override
-    public Float getHeight(Vector3f point) {
-        return getHeightArray(toFloatArray(point), defaultExtents());
-    }
-
-    @Override
-    public Float getHeight(Vector3f point, Vector3f extents) {
-        return getHeightArray(toFloatArray(point), toFloatArray(extents));
+    public Float getHeight(Vector3f point, NavOptions options) {
+        return getHeightArray(toFloatArray(point), extents(optionsOrDefault(options)));
     }
 
     @Override
@@ -85,6 +71,20 @@ public class DefaultNavQueryApi implements NavQueryApi {
 
     private float[] defaultExtents() {
         return defaultExtentsSupplier.get();
+    }
+
+    private NavOptions optionsOrDefault(NavOptions options) {
+        if (options == null) {
+            return NavOptions.defaults();
+        }
+        return options;
+    }
+
+    private float[] extents(NavOptions options) {
+        if (options.hasExtents()) {
+            return toFloatArray(options.getExtents());
+        }
+        return defaultExtents();
     }
 
     private boolean isWalkableArray(float[] point, float[] extents) {

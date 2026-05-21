@@ -1,6 +1,7 @@
 import com.github.silencesu.Easy3dNav.Easy3dNav;
 import com.github.silencesu.Easy3dNav.Vector3f;
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
+import com.github.silencesu.Easy3dNav.api.NavOptions;
 import com.github.silencesu.Easy3dNav.api.NavQueryApi;
 import com.github.silencesu.Easy3dNav.api.NavRandomApi;
 import com.github.silencesu.Easy3dNav.api.NavWallHit;
@@ -133,9 +134,11 @@ public class Easy3dNavTest {
         File navmesh = writeU3dFixture();
         Easy3dNav nav = new Easy3dNav();
         nav.init(navmesh.getAbsolutePath());
+        NavOptions validOptions = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+        NavOptions smallOptions = NavOptions.builder().extents(new Vector3f(1f, 1f, 1f)).build();
 
-        assertTrue(nav.query().isWalkable(new Vector3f(5f, 0f, 5f), new Vector3f(2f, 4f, 2f)));
-        assertFalse(nav.query().isWalkable(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f)));
+        assertTrue(nav.query().isWalkable(new Vector3f(5f, 0f, 5f), validOptions));
+        assertFalse(nav.query().isWalkable(new Vector3f(100f, 0f, 100f), smallOptions));
     }
 
     @Test
@@ -143,9 +146,11 @@ public class Easy3dNavTest {
         File navmesh = writeU3dFixture();
         Easy3dNav nav = new Easy3dNav();
         nav.init(navmesh.getAbsolutePath());
+        NavOptions validOptions = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+        NavOptions smallOptions = NavOptions.builder().extents(new Vector3f(1f, 1f, 1f)).build();
 
-        Vector3f closest = nav.query().closestPoint(new Vector3f(5f, 2f, 5f), new Vector3f(2f, 4f, 2f));
-        Vector3f missing = nav.query().closestPoint(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f));
+        Vector3f closest = nav.query().closestPoint(new Vector3f(5f, 2f, 5f), validOptions);
+        Vector3f missing = nav.query().closestPoint(new Vector3f(100f, 0f, 100f), smallOptions);
 
         assertVectorEquals(new Vector3f(5f, 0f, 5f), closest);
         assertNull(missing);
@@ -156,9 +161,11 @@ public class Easy3dNavTest {
         File navmesh = writeU3dFixture();
         Easy3dNav nav = new Easy3dNav();
         nav.init(navmesh.getAbsolutePath());
+        NavOptions validOptions = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+        NavOptions smallOptions = NavOptions.builder().extents(new Vector3f(1f, 1f, 1f)).build();
 
-        Float height = nav.query().getHeight(new Vector3f(5f, 2f, 5f), new Vector3f(2f, 4f, 2f));
-        Float missing = nav.query().getHeight(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f));
+        Float height = nav.query().getHeight(new Vector3f(5f, 2f, 5f), validOptions);
+        Float missing = nav.query().getHeight(new Vector3f(100f, 0f, 100f), smallOptions);
 
         assertNotNull(height);
         assertEquals(0f, height.floatValue(), 0.001f);
@@ -170,11 +177,61 @@ public class Easy3dNavTest {
         File navmesh = writeU3dFixture();
         Easy3dNav nav = new Easy3dNav();
         nav.init(navmesh.getAbsolutePath());
+        NavOptions validOptions = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+        NavOptions smallOptions = NavOptions.builder().extents(new Vector3f(1f, 1f, 1f)).build();
 
         assertTrue(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f),
-                new Vector3f(2f, 4f, 2f)));
+                validOptions));
         assertFalse(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(100f, 0f, 100f),
-                new Vector3f(1f, 1f, 1f)));
+                smallOptions));
+    }
+
+    @Test
+    public void pathApiFindsPathWithDefaultOptions() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(writeU3dFixture().getAbsolutePath());
+
+        List<Vector3f> path = nav.path().find(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f));
+
+        assertFalse(path.isEmpty());
+        assertVectorEquals(new Vector3f(1f, 0f, 1f), path.get(0));
+        assertVectorEquals(new Vector3f(9f, 0f, 9f), path.get(path.size() - 1));
+    }
+
+    @Test
+    public void pathApiUsesNavOptionsForExtentsAndPathLimits() throws Exception {
+        Easy3dNav nav = new Easy3dNav();
+        nav.setExtents(new float[]{0.1f, 0.1f, 0.1f});
+        nav.init(writeU3dFixture().getAbsolutePath());
+        Vector3f start = new Vector3f(-1f, 0f, 1f);
+        Vector3f end = new Vector3f(9f, 0f, 9f);
+
+        NavOptions options = NavOptions.builder()
+                .extents(new Vector3f(2f, 4f, 2f))
+                .maxStraightPath(1)
+                .straightPathOptions(NavOptions.STRAIGHT_PATH_ALL_CROSSINGS)
+                .anyAngle(true)
+                .raycastLimit(-1f)
+                .build();
+        List<Vector3f> path = nav.path().find(start, end, options);
+
+        assertEquals(1, path.size());
+        assertVectorInFlatMesh(path.get(0), 10f);
+        assertTrue(nav.path().isReachable(start, end, options));
+        assertFalse(nav.path().isReachable(start, end));
+    }
+
+    @Test
+    public void navOptionsDefensivelyCopiesExtents() {
+        Vector3f extents = new Vector3f(2f, 4f, 2f);
+        NavOptions options = NavOptions.builder().extents(extents).build();
+        extents.setX(99f);
+        Vector3f returned = options.getExtents();
+        returned.setY(99f);
+
+        assertEquals(2f, options.getExtents().getX(), 0.001f);
+        assertEquals(4f, options.getExtents().getY(), 0.001f);
+        assertTrue(options.hasExtents());
     }
 
     @Test
@@ -185,9 +242,9 @@ public class Easy3dNavTest {
         nav.init(navmesh.getAbsolutePath());
 
         Vector3f point = new Vector3f(5f, 2f, 5f);
-        Vector3f extents = new Vector3f(2f, 4f, 2f);
-        Vector3f closest = nav.query().closestPoint(point, extents);
-        Float height = nav.query().getHeight(point, extents);
+        NavOptions options = NavOptions.builder().extents(new Vector3f(2f, 4f, 2f)).build();
+        Vector3f closest = nav.query().closestPoint(point, options);
+        Float height = nav.query().getHeight(point, options);
 
         assertTrue(nav.query().isWalkable(point));
         assertNotNull(closest);
@@ -198,15 +255,19 @@ public class Easy3dNavTest {
         assertEquals(0f, height.floatValue(), 0.001f);
         assertTrue(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f)));
         assertFalse(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(100f, 0f, 100f),
-                new Vector3f(1f, 1f, 1f)));
+                NavOptions.builder().extents(new Vector3f(1f, 1f, 1f)).build()));
     }
 
     @Test
     public void groupedApiInterfacesDoNotExposeFloatArrays() {
+        assertNoFloatArrayInPublicMethods(NavOptions.class);
+        assertNoFloatArrayInPublicMethods(NavOptions.Builder.class);
         assertNoFloatArrayInPublicMethods(NavQueryApi.class);
         assertNoFloatArrayInPublicMethods(NavPathApi.class);
         assertNoFloatArrayInPublicMethods(NavRandomApi.class);
         assertNoFloatArrayInPublicMethods(NavWallHit.class);
+        assertNoRecast4jTypesInPublicMethods(NavOptions.class);
+        assertNoRecast4jTypesInPublicMethods(NavOptions.Builder.class);
         assertNoRecast4jTypesInPublicMethods(NavQueryApi.class);
         assertNoRecast4jTypesInPublicMethods(NavPathApi.class);
         assertNoRecast4jTypesInPublicMethods(NavRandomApi.class);

@@ -38,7 +38,22 @@ public class DetourQueries {
      * 最后把 polygon path 转成 straight path 点列表。</p>
      */
     public List<float[]> find(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents) {
+        return find(query, filter, start, end, extents, Integer.MAX_VALUE, 0, 0, 0f);
+    }
+
+    /**
+     * 查找路径并允许调用方通过 NavOptions 控制 Detour 路径参数。
+     *
+     * <p>findPathOptions 和 raycastLimit 直接作用于 Detour findPath；maxStraightPath 和
+     * straightPathOptions 作用于 Detour findStraightPath。公开 API 仍只返回坐标点。</p>
+     */
+    public List<float[]> find(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents,
+                              int maxStraightPath, int straightPathOptions, int findPathOptions,
+                              float raycastLimit) {
         List<float[]> pathRet = new ArrayList<>();
+        if (maxStraightPath <= 0) {
+            return pathRet;
+        }
 
         // 起点和终点都必须先找到可用 polygon，后续 findPath 才有合法的起止 ref。
         Result<FindNearestPolyResult> startQuery = query.findNearestPoly(start, extents, filter);
@@ -62,7 +77,7 @@ public class DetourQueries {
 
         // findPath 返回的是 polygon ref 列表，还不是最终可直接给业务使用的坐标点。
         Result<List<Long>> path = query.findPath(startResult.getNearestRef(), endResult.getNearestRef(),
-                startResult.getNearestPos(), endResult.getNearestPos(), filter);
+                startResult.getNearestPos(), endResult.getNearestPos(), filter, findPathOptions, raycastLimit);
 
         if (path.status != Status.SUCCSESS || path.result == null) {
             LOGGER.info("nav path  status is  {}", path.status);
@@ -71,7 +86,7 @@ public class DetourQueries {
 
         // 将 polygon path 拉直为路径点，Easy3dNav 对外只返回坐标，不暴露 Detour path item。
         Result<List<StraightPathItem>> straightPathQuery = query.findStraightPath(startResult.getNearestPos(),
-                endResult.getNearestPos(), path.result, Integer.MAX_VALUE, 0);
+                endResult.getNearestPos(), path.result, maxStraightPath, straightPathOptions);
         if (straightPathQuery.failed() || straightPathQuery.result == null) {
             LOGGER.info("straight path status is {}", straightPathQuery.status);
             return Collections.emptyList();
@@ -187,6 +202,14 @@ public class DetourQueries {
      * ref 是否就是终点 polygon ref。</p>
      */
     public boolean isReachable(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents) {
+        return isReachable(query, filter, start, end, extents, 0, 0f);
+    }
+
+    /**
+     * 使用 Detour findPath 参数判断两点是否连通。
+     */
+    public boolean isReachable(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents,
+                               int findPathOptions, float raycastLimit) {
         FindNearestPolyResult startNearest = findNearestPoly(query, filter, start, extents);
         FindNearestPolyResult endNearest = findNearestPoly(query, filter, end, extents);
         if (startNearest == null || endNearest == null) {
@@ -203,7 +226,7 @@ public class DetourQueries {
         }
 
         Result<List<Long>> pathQuery = query.findPath(startRef, endRef,
-                startNearest.getNearestPos(), endNearest.getNearestPos(), filter);
+                startNearest.getNearestPos(), endNearest.getNearestPos(), filter, findPathOptions, raycastLimit);
         if (pathQuery.failed() || pathQuery.result == null || pathQuery.result.isEmpty()) {
             return false;
         }

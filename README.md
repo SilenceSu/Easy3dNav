@@ -44,6 +44,14 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
 
     //可达性判断
     boolean reachable = nav.path().isReachable(start, end);
+    NavOptions options = NavOptions.builder()
+            .extents(new Vector3f(2f, 4f, 2f))
+            .maxStraightPath(64)
+            .straightPathOptions(NavOptions.STRAIGHT_PATH_ALL_CROSSINGS)
+            .anyAngle(true)
+            .raycastLimit(-1f)
+            .build();
+    List<Vector3f> controlledPath = nav.path().find(start, end, options);
 
     //随机可走点
     Vector3f patrol = nav.random().pointAround(point, 20f);
@@ -95,13 +103,13 @@ https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 ### 功能规划
 
-Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询、`nav.path().isReachable` 和 `nav.random()` 随机点等接口。后续扩展优先围绕 Detour 查询能力补齐：
+Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询、`nav.path()` 路径查询、`NavOptions` 和 `nav.random()` 随机点等接口。后续扩展优先围绕 Detour 查询能力补齐：
 
 - 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`、`hasWalkableAround`、`distanceToWall`、`nearestWall`，后续补充 `getPolyWallSegments` 等调试能力。
-- 路径控制：增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、区域 cost、include/exclude flags、any-angle、partial path 等参数。
+- 路径控制：已增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、straight path options、find path options 和 raycast limit。
 - 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
 - 随机点与范围查询：已增加 `random().point`、`pointAround`、`pointWithin`，后续补充候选点列表、`findLocalNeighbourhood` 等高级范围能力。
-- 加载与管理：补充 `File`、`InputStream`、`ByteBuffer` 加载入口，后续按需要支持 tile 信息查询、tile 热更新和调试数据输出。
+- 加载与管理：已补充 `File` 加载入口；`InputStream`、`ByteBuffer`、tile 信息查询、tile 热更新和调试数据输出后续按需要再设计。
 - 并发约定：`Easy3dNav` 加载后的 `NavMesh` 按只读数据共享；每个线程会自动持有独立的 `NavMeshQuery`。默认 `QueryFilter` 不做 ThreadLocal 隔离，由后续过滤器封装统一规划。`init`/重载地图不应与查询并发执行；使用线程池并频繁卸载或重载地图时，可调用 `clearThreadLocalQuery()` 清理当前线程缓存。
 
 ### 版本规划

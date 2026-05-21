@@ -1,8 +1,11 @@
 package com.github.silencesu.Easy3dNav.internal;
 
 import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavOptions;
 import com.github.silencesu.Easy3dNav.api.NavPathApi;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -31,21 +34,51 @@ public class DefaultNavPathApi implements NavPathApi {
     }
 
     @Override
-    public boolean isReachable(Vector3f start, Vector3f end) {
-        return isReachableArray(toFloatArray(start), toFloatArray(end), defaultExtents());
+    public List<Vector3f> find(Vector3f start, Vector3f end, NavOptions options) {
+        NavOptions safeOptions = optionsOrDefault(options);
+        List<float[]> points = detourQueries.find(context.query(), context.filter(), toFloatArray(start),
+                toFloatArray(end), extents(safeOptions), safeOptions.getMaxStraightPath(),
+                safeOptions.getStraightPathOptions(), safeOptions.getFindPathOptions(),
+                safeOptions.getRaycastLimit());
+        return toVectorList(points);
     }
 
     @Override
-    public boolean isReachable(Vector3f start, Vector3f end, Vector3f extents) {
-        return isReachableArray(toFloatArray(start), toFloatArray(end), toFloatArray(extents));
+    public boolean isReachable(Vector3f start, Vector3f end, NavOptions options) {
+        NavOptions safeOptions = optionsOrDefault(options);
+        return detourQueries.isReachable(context.query(), context.filter(), toFloatArray(start), toFloatArray(end),
+                extents(safeOptions), safeOptions.getFindPathOptions(), safeOptions.getRaycastLimit());
     }
 
     private float[] defaultExtents() {
         return defaultExtentsSupplier.get();
     }
 
-    private boolean isReachableArray(float[] start, float[] end, float[] extents) {
-        return detourQueries.isReachable(context.query(), context.filter(), start, end, extents);
+    private NavOptions optionsOrDefault(NavOptions options) {
+        if (options == null) {
+            return NavOptions.defaults();
+        }
+        return options;
+    }
+
+    private float[] extents(NavOptions options) {
+        if (options.hasExtents()) {
+            return toFloatArray(options.getExtents());
+        }
+        return defaultExtents();
+    }
+
+    private List<Vector3f> toVectorList(List<float[]> points) {
+        List<Vector3f> vectors = new ArrayList<>();
+        if (points == null) {
+            return vectors;
+        }
+        for (float[] point : points) {
+            if (point != null && point.length >= 3) {
+                vectors.add(new Vector3f(point[0], point[1], point[2]));
+            }
+        }
+        return vectors;
     }
 
     private static float[] toFloatArray(Vector3f vector) {

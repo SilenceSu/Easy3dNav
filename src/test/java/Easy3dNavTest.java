@@ -1,4 +1,7 @@
 import com.github.silencesu.Easy3dNav.Easy3dNav;
+import com.github.silencesu.Easy3dNav.Vector3f;
+import com.github.silencesu.Easy3dNav.api.NavPathApi;
+import com.github.silencesu.Easy3dNav.api.NavQueryApi;
 import org.junit.Test;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
@@ -9,6 +12,7 @@ import org.recast4j.detour.io.MeshDataWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Method;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +24,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class Easy3dNavTest {
@@ -105,6 +111,85 @@ public class Easy3dNavTest {
             assertNotNull(nearest);
             assertArrayEquals(new float[]{5f, 0f, 5f}, nearest, 0.001f);
         });
+    }
+
+    @Test
+    public void queryApiReportsWalkableAndNotWalkable() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(navmesh.getAbsolutePath());
+
+        assertTrue(nav.query().isWalkable(new Vector3f(5f, 0f, 5f), new Vector3f(2f, 4f, 2f)));
+        assertFalse(nav.query().isWalkable(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f)));
+    }
+
+    @Test
+    public void queryApiReturnsClosestPointOrNull() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(navmesh.getAbsolutePath());
+
+        Vector3f closest = nav.query().closestPoint(new Vector3f(5f, 2f, 5f), new Vector3f(2f, 4f, 2f));
+        Vector3f missing = nav.query().closestPoint(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f));
+
+        assertVectorEquals(new Vector3f(5f, 0f, 5f), closest);
+        assertNull(missing);
+    }
+
+    @Test
+    public void queryApiReturnsHeightOrNull() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(navmesh.getAbsolutePath());
+
+        Float height = nav.query().getHeight(new Vector3f(5f, 2f, 5f), new Vector3f(2f, 4f, 2f));
+        Float missing = nav.query().getHeight(new Vector3f(100f, 0f, 100f), new Vector3f(1f, 1f, 1f));
+
+        assertNotNull(height);
+        assertEquals(0f, height.floatValue(), 0.001f);
+        assertNull(missing);
+    }
+
+    @Test
+    public void pathApiReportsReachableAndUnreachable() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.init(navmesh.getAbsolutePath());
+
+        assertTrue(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f),
+                new Vector3f(2f, 4f, 2f)));
+        assertFalse(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(100f, 0f, 100f),
+                new Vector3f(1f, 1f, 1f)));
+    }
+
+    @Test
+    public void groupedApisSupportVector3fAndDefaultExtents() throws Exception {
+        File navmesh = writeU3dFixture();
+        Easy3dNav nav = new Easy3dNav();
+        nav.setExtents(new float[]{2f, 4f, 2f});
+        nav.init(navmesh.getAbsolutePath());
+
+        Vector3f point = new Vector3f(5f, 2f, 5f);
+        Vector3f extents = new Vector3f(2f, 4f, 2f);
+        Vector3f closest = nav.query().closestPoint(point, extents);
+        Float height = nav.query().getHeight(point, extents);
+
+        assertTrue(nav.query().isWalkable(point));
+        assertNotNull(closest);
+        assertEquals(5f, closest.getX(), 0.001f);
+        assertEquals(0f, closest.getY(), 0.001f);
+        assertEquals(5f, closest.getZ(), 0.001f);
+        assertNotNull(height);
+        assertEquals(0f, height.floatValue(), 0.001f);
+        assertTrue(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(9f, 0f, 9f)));
+        assertFalse(nav.path().isReachable(new Vector3f(1f, 0f, 1f), new Vector3f(100f, 0f, 100f),
+                new Vector3f(1f, 1f, 1f)));
+    }
+
+    @Test
+    public void groupedApiInterfacesDoNotExposeFloatArrays() {
+        assertNoFloatArrayInPublicMethods(NavQueryApi.class);
+        assertNoFloatArrayInPublicMethods(NavPathApi.class);
     }
 
     @Test
@@ -212,5 +297,23 @@ public class Easy3dNavTest {
 
     private interface CheckedRunnable {
         void run() throws Exception;
+    }
+
+    private void assertVectorEquals(Vector3f expected, Vector3f actual) {
+        assertNotNull(actual);
+        assertEquals(expected.getX(), actual.getX(), 0.001f);
+        assertEquals(expected.getY(), actual.getY(), 0.001f);
+        assertEquals(expected.getZ(), actual.getZ(), 0.001f);
+    }
+
+    private void assertNoFloatArrayInPublicMethods(Class<?> apiClass) {
+        for (Method method : apiClass.getMethods()) {
+            assertFalse(method.getName() + " should not return float[]",
+                    method.getReturnType().isArray() && method.getReturnType().getComponentType() == float.class);
+            for (Class<?> parameterType : method.getParameterTypes()) {
+                assertFalse(method.getName() + " should not accept float[]",
+                        parameterType.isArray() && parameterType.getComponentType() == float.class);
+            }
+        }
     }
 }

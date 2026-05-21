@@ -1,5 +1,6 @@
 package com.github.silencesu.Easy3dNav.internal;
 
+import org.recast4j.detour.ClosestPointOnPolyResult;
 import org.recast4j.detour.FindNearestPolyResult;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
@@ -123,5 +124,95 @@ public class DetourQueries {
             return null;
         }
         return queryResult.result.getNearestPos();
+    }
+
+    /**
+     * 判断指定点附近是否存在有效可行走 polygon。
+     *
+     * <p>公开 API 不暴露 polygon ref，这里只把 Detour 的 nearestRef 转成布尔语义。</p>
+     */
+    public boolean isWalkable(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, point, extents);
+        return nearest != null && nearest.getNearestRef() != 0;
+    }
+
+    /**
+     * 把指定点吸附到最近 polygon 上的可行走位置。
+     *
+     * <p>Detour 的 closestPointOnPoly 需要 polygon ref，所以先通过 findNearestPoly 定位 polygon，
+     * 再把真实吸附点返回给上层。</p>
+     */
+    public float[] closestPoint(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, point, extents);
+        if (nearest == null || nearest.getNearestRef() == 0) {
+            return null;
+        }
+
+        Result<ClosestPointOnPolyResult> closestQuery = query.closestPointOnPoly(nearest.getNearestRef(), point);
+        if (closestQuery.failed() || closestQuery.result == null) {
+            return null;
+        }
+        return closestQuery.result.getClosest();
+    }
+
+    /**
+     * 查询指定点附近 NavMesh 表面的高度。
+     *
+     * <p>这里使用 findNearestPoly 返回的 nearestPos 调用 getPolyHeight，确保传入点已经落在目标
+     * polygon 的 XZ 范围内，避免外部点只靠 extents 命中 polygon 时高度查询失败。</p>
+     */
+    public Float getHeight(NavMeshQuery query, QueryFilter filter, float[] point, float[] extents) {
+        FindNearestPolyResult nearest = findNearestPoly(query, filter, point, extents);
+        if (nearest == null || nearest.getNearestRef() == 0) {
+            return null;
+        }
+
+        Result<Float> heightQuery = query.getPolyHeight(nearest.getNearestRef(), nearest.getNearestPos());
+        if (heightQuery.failed() || heightQuery.result == null) {
+            return null;
+        }
+        return heightQuery.result;
+    }
+
+    /**
+     * 判断两点是否能通过 NavMesh 连通。
+     *
+     * <p>findPath 可能返回部分路径，因此除了查询成功外，还要检查返回的 polygon path 最后一个
+     * ref 是否就是终点 polygon ref。</p>
+     */
+    public boolean isReachable(NavMeshQuery query, QueryFilter filter, float[] start, float[] end, float[] extents) {
+        FindNearestPolyResult startNearest = findNearestPoly(query, filter, start, extents);
+        FindNearestPolyResult endNearest = findNearestPoly(query, filter, end, extents);
+        if (startNearest == null || endNearest == null) {
+            return false;
+        }
+
+        long startRef = startNearest.getNearestRef();
+        long endRef = endNearest.getNearestRef();
+        if (startRef == 0 || endRef == 0) {
+            return false;
+        }
+        if (startRef == endRef) {
+            return true;
+        }
+
+        Result<List<Long>> pathQuery = query.findPath(startRef, endRef,
+                startNearest.getNearestPos(), endNearest.getNearestPos(), filter);
+        if (pathQuery.failed() || pathQuery.result == null || pathQuery.result.isEmpty()) {
+            return false;
+        }
+        return pathQuery.result.get(pathQuery.result.size() - 1) == endRef;
+    }
+
+    private FindNearestPolyResult findNearestPoly(NavMeshQuery query, QueryFilter filter, float[] point,
+                                                  float[] extents) {
+        if (point == null || extents == null) {
+            return null;
+        }
+        Result<FindNearestPolyResult> queryResult = query.findNearestPoly(point, extents, filter);
+        if (queryResult.failed() || queryResult.result == null) {
+            return null;
+        }
+        return queryResult.result;
     }
 }

@@ -30,8 +30,20 @@ unity中navmesh数据使用以下工具导出 [https://github.com/kbengine/unity
     //服务端用的为 srv_*.navmesh  
     nav.init(filePath);
     
+    Vector3f start = new Vector3f(1f, 0f, 1f);
+    Vector3f end = new Vector3f(9f, 0f, 9f);
+    Vector3f point = new Vector3f(5f, 0f, 5f);
+
     //使用寻路接口，寻路
-    List<Float> paths=nav.find(float[] start, float[] end);
+    List<Vector3f> paths = nav.find(start, end);
+
+    //基础位置查询
+    boolean walkable = nav.query().isWalkable(point);
+    Vector3f closest = nav.query().closestPoint(point);
+    Float height = nav.query().getHeight(point);
+
+    //可达性判断
+    boolean reachable = nav.path().isReachable(start, end);
     
     /***
     * 更多demo 请参考 src/test/java
@@ -74,9 +86,9 @@ https://jiangguilong2000.blog.csdn.net/article/details/125592067
 
 ### 功能规划
 
-Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest` 等基础接口。后续扩展优先围绕 Detour 查询能力补齐：
+Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，不维护 recast4j fork。当前已提供 U3D/CritterAI NavMesh 加载、`find`、`raycast`、`findNearest`、`nav.query()` 基础位置查询和 `nav.path().isReachable` 等接口。后续扩展优先围绕 Detour 查询能力补齐：
 
-- 查询能力：增加 `isWalkable`、`isReachable`、`getHeight`、`closestPointOnPoly`、`findDistanceToWall`、`getPolyWallSegments`。
+- 查询能力：已增加 `isWalkable`、`isReachable`、`getHeight`、`closestPoint`，后续补充 `findDistanceToWall`、`getPolyWallSegments`。
 - 路径控制：增加 `NavOptions`，统一管理 `extents`、`maxStraightPath`、区域 cost、include/exclude flags、any-angle、partial path 等参数。
 - 区域与过滤器：封装 `QueryFilter`，支持不同单位类型、地形代价、区域屏蔽和业务自定义过滤策略。
 - 随机点与范围查询：增加 `findRandomPoint`、`findRandomPointAround`、`findPolysAroundCircle`、`findLocalNeighbourhood`，用于怪物巡逻、出生点、逃跑点和附近可走区域扫描。
@@ -87,10 +99,7 @@ Easy3dNav 的定位是对 recast4j Detour 做服务端友好的轻量封装，�
 
 详细路线见 [Easy3dNav 版本计划书](VERSION_PLAN.md)，接口差距见 [recast4j Detour 接口差距分析](RECAST4J_API_GAP.md)。
 
-- `2.x`：保持 Java 8 基线，使用 `org.recast4j:detour:1.5.7`，重点补齐 Detour 查询封装、U3D 兼容测试和服务端常用 API。
-- `2.1`：优先引入 `NavOptions`、`isReachable`、`isWalkable`、`findDistanceToWall`。
-- `2.2`：补充随机点、范围查询、区域 cost 和过滤器封装。
-- `2.3`：完善加载入口、真实 U3D fixture 测试、调试信息输出。
+- `2.0`：保持 Java 8 基线，使用 `org.recast4j:detour:1.5.7`，逐项补齐 Detour 查询封装、U3D 兼容测试和服务端常用 API。
 - `3.x`：考虑升级 Java 11/17，并跟进 recast4j `1.5.8+` 或更高版本；该路线需要单独评估兼容性。
  
  

@@ -1,5 +1,9 @@
 package com.github.silencesu.Easy3dNav;
 
+import com.github.silencesu.Easy3dNav.api.NavPathApi;
+import com.github.silencesu.Easy3dNav.api.NavQueryApi;
+import com.github.silencesu.Easy3dNav.internal.DefaultNavPathApi;
+import com.github.silencesu.Easy3dNav.internal.DefaultNavQueryApi;
 import com.github.silencesu.Easy3dNav.internal.DetourQueries;
 import com.github.silencesu.Easy3dNav.internal.NavMeshContext;
 import com.github.silencesu.Easy3dNav.io.NavMeshLoader;
@@ -33,6 +37,8 @@ public class Easy3dNav implements EasyNavFunc {
     private final DetourQueries detourQueries = new DetourQueries();
 
     private float[] extents = {2.f, 2.f, 2.f};
+    private final NavQueryApi queryApi = new DefaultNavQueryApi(context, detourQueries, () -> extents);
+    private final NavPathApi pathApi = new DefaultNavPathApi(context, detourQueries, () -> extents);
 
 
     public Easy3dNav() {
@@ -77,6 +83,24 @@ public class Easy3dNav implements EasyNavFunc {
      */
     public void clearThreadLocalQuery() {
         context.clearThreadLocalQuery();
+    }
+
+    /**
+     * 返回基础位置查询分组 API。
+     *
+     * <p>新增查询能力优先放在该分组下，避免 Easy3dNav 门面类持续堆积大量方法。</p>
+     */
+    public NavQueryApi query() {
+        return queryApi;
+    }
+
+    /**
+     * 返回路径能力分组 API。
+     *
+     * <p>当前先承载可达性判断，后续路径控制类能力也优先放在该分组下。</p>
+     */
+    public NavPathApi path() {
+        return pathApi;
     }
 
     /**
